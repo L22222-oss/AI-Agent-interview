@@ -1,0 +1,23 @@
+{
+  "name": "interview-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "面试智能体复刻版 — 三关式 AI 面试（简历问答 / 能力评估 / 实操交付）+ Offer 电子签约，附 REA 与 Agent-Reach 双考核适配层",
+  "type": "commonjs",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "reach": "node tools/reach/reach.js",
+    "rea": "node tools/rea/rea.js",
+    "eval": "node eval/run.js",
+    "eval:rea": "node eval/run.js --only=rea",
+    "eval:reach": "node eval/run.js --only=reach",
+    "eval:replica": "node eval/run.js --only=replica"
+  },
+  "dependencies": {},
+  "license": "MIT"
+}

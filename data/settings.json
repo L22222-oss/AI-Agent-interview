@@ -1,0 +1,9 @@
+[
+  {
+    "id": "global",
+    "retentionDays": 90,
+    "contactEmail": "",
+    "autoAdvance": true,
+    "updatedAt": "2026-10-20T13:57:22.447Z"
+  }
+]

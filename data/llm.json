@@ -1,0 +1,7 @@
+{
+  "provider": "custom",
+  "baseUrl": "https://api.huanling.icu/",
+  "model": "gpt-6.1-sol",
+  "timeout": 30000,
+  "apiKey": "sk-5446d0a39f248e08037e0db83db0a4b19c80a5b832ebd04c3bf96c243df2a6c9"
+}

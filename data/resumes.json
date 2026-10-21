@@ -1,0 +1,189 @@
+[
+  {
+    "id": "cvmvhf3rv842qxh5f5",
+    "jobId": "j1792506161941",
+    "name": "陆强飞",
+    "cand": "陆强飞",
+    "text": "wakeup课程表 2026.09-2026.09 api中转站token用量查询 全栈工程师 2026.10-2026.10 陆强飞 男 | 籍贯：淮安 | 非党员 | 13405503060 | 1492540483@qq.com 期望薪资：5-7K 个人优势 个人博客 CSDN：https://blog.csdn.net/2403_87805237?type=blog 博客园：https：//www.cnblogs.com/L2Z2Z2] Github：https：//github.com/L22222-oss 技术栈： web：Mysql，dbbower使用，nmap，burpsuite使用，基本sql语法，文件上传，越权 AI：熟练codex，deepseek，claudecodecli等ai工具，进行日常工作协作，使用agent制作小工具，app，逆向，ai与git联合进 行开发的迭代，记录 安卓： 安卓逆向：fridahook，基本调试流程，签名，打包，脱壳 安卓开发：compose，协程，mvvm架构，了解基本网络请求，了解kotlin，了解jetpack常用组件Viewmodel，了解基本的And roid四大组件与生命周期，了解sprintboot框架，python/fastapi服务器 Windows：熟悉ida，xdbg，jadx，jeb工具使用，花指令，异常处理，各种常见算法，py打包，控制流平坦化，smc，vm语 言：c，python，java，汇编，kotlin 比赛经历： 2025强网杯，2025强网拟态，2025中国移动盐城分部大学生选拔，2026领航杯，2026御网杯 2026第九届中国高校智能机器人创意大赛-软件系统安全赛全国总决赛 获得奖项： 院个人三等奖 国A软件安全大赛国家一等奖 江苏省领航杯省特等奖 御网杯网络安全大赛线上一等奖 个人实操： 某课表软件去除广告 •edu.src平台中危，低危漏洞产出 项目经历 通过算法助手，以及mt管理器抓取app的activity活动记录，去除广告，不过导致手机号无法注册，但是可以正常导入课程使用， 不影响 项目描述： RelayTokens 是一款面向AI 中转站用户的AndroidToken用量查询应用。用户输入中转站地址、账号和密码后，应用通过中转站 提供的API 获取账户余额、累计Token、今日Token、请求次数以及各模型的Token消耗数据，方便用户在手机端实时查看使用情 况。 主要功能：\n盐城师范学院 本科 物联网工程 2024-2028 盐城师范学院 本科 物联网工程 2024-2028 教育经历 物联网工程 至今 - 支持自定义中转站地址和账号登录 - 查看账户余额、累计Token、今日Token和请求次数 - 查看今日各模型的Token消耗和请求次数 - 查看总模型用量统计 - 支持手动刷新数据 - 支持Token自动刷新和退出登录 - 适配兼容Sub2API 接口规范的中转站 采用技术： - 使用Kotlin开发Android应用 - 使用JetpackCompose构建用户界面 - 使用MVVM架构组织代码 - 使用ViewModel 管理界面状态和业务操作 - 使用StateFlow更新界面状态 - 使用Retrofit/HTTP接口访问中转站服务 - 使用SharedPreferences 保存登录Token - 按功能划分为View、ViewModel、Repository和API 数据层 教育经历 荣誉奖项 江苏省领航杯省特等奖 院个人三等奖 国A软件安全大赛国家一等奖 御网杯网络安全大赛线上一等奖",
+    "facts": [
+      "候选人陆强飞，盐城师范学院物联网工程本科在读，简历标注就读时间为2024—2028。",
+      "简历列出 Kotlin、Jetpack Compose、MVVM、ViewModel、StateFlow、Retrofit 和 SharedPreferences，并描述了名为 RelayTokens 的 Android 项目。",
+      "RelayTokens 项目用于查询 AI 中转站账户余额、Token 用量、请求次数及模型用量；简历称其兼容 Sub2API 接口规范。",
+      "简历称曾使用算法助手和 MT 管理器分析某课表软件并去除广告，同时提到手机号无法注册但仍可导入课程。",
+      "简历列出 Frida Hook、IDA、x64dbg、JADX、JEB 等工具，以及 Python、Java、C、汇编和 Kotlin 等语言。",
+      "简历列出国 A 软件安全大赛国家一等奖、江苏省领航杯省特等奖、御网杯网络安全大赛线上一等奖等结果。"
+    ],
+    "pending": [
+      "请补充完整岗位 JD，以便评估岗位匹配度并生成针对岗位要求的问题。",
+      "核实“wakeup课程表”和“api中转站token用量查询”两段经历的时间与性质；简历标注的时间分别为2026.09—2026.09和2026.10—2026.10。",
+      "核实 RelayTokens 项目的实际完成范围、个人负责部分、运行或测试情况，以及登录凭证和 Token 刷新的实现细节。",
+      "核实课表软件去广告项目中手机号无法注册的原因、影响范围，以及是否获得授权进行分析和修改。",
+      "核实比赛名称、获奖级别、个人或团队身份，以及各项成果对应的时间。"
+    ],
+    "questions": [
+      "请按一次完整的数据流说明 RelayTokens 如何从用户登录开始获取账户余额和模型用量：Retrofit、Repository、ViewModel 与 StateFlow 分别承担什么职责？",
+      "你提到 RelayTokens 兼容 Sub2API 接口规范。项目如何处理不同中转站的自定义地址、接口差异和请求失败？请结合实际实现说明。",
+      "简历写到使用 SharedPreferences 保存登录 Token，并支持自动刷新和退出登录。Token 的保存、刷新失败和退出清理分别是如何处理的？",
+      "你在课表软件去广告后发现手机号无法注册、但仍可导入课程。你是如何定位这一影响的？采取了哪些验证步骤，如何界定修改范围？",
+      "你列出 Frida Hook、JADX、JEB 和 MT 管理器等经验。请选一次实际分析过程，说明如何从 Activity 记录定位目标功能，以及如何验证修改后的行为。",
+      "请结合你获得的国 A 软件安全大赛国家一等奖或江苏省领航杯省特等奖，说明你负责的具体任务、用到的技术，以及最终成果如何评定。"
+    ],
+    "parsed": {
+      "projects": [
+        "claudecodecli等ai工具",
+        "使用agent制作小工具",
+        "了解sprintboot框架",
+        "fastapi服务",
+        "jeb工具",
+        "6第九届中国高校智能机器人创意大赛-软件系统",
+        "edu.src平台",
+        "以及mt管理器抓取app"
+      ],
+      "tech": [
+        "MySQL",
+        "SQL",
+        "Git",
+        "Kotlin",
+        "Python",
+        "FastAPI",
+        "IDA",
+        "Java",
+        "Android"
+      ],
+      "metrics": [],
+      "gaps": []
+    },
+    "match": 0,
+    "matchReason": "未提供可评估的岗位 JD 内容，无法将岗位职责和要求与简历证据进行匹配，因此暂不能判断岗位适配度。",
+    "source": "llm",
+    "provider": "custom",
+    "model": "gpt-6.1-sol",
+    "at": "2026-10-21T01:12:37.845Z"
+  },
+  {
+    "id": "cvmvhf5ff5scxv0q6w",
+    "jobId": "j1792506161941",
+    "name": "陆强飞",
+    "cand": "陆强飞",
+    "text": "wakeup课程表 2026.09-2026.09 api中转站token用量查询 全栈工程师 2026.10-2026.10 陆强飞 男 | 籍贯：淮安 | 非党员 | 13405503060 | 1492540483@qq.com 期望薪资：5-7K 个人优势 个人博客 CSDN：https://blog.csdn.net/2403_87805237?type=blog 博客园：https：//www.cnblogs.com/L2Z2Z2] Github：https：//github.com/L22222-oss 技术栈： web：Mysql，dbbower使用，nmap，burpsuite使用，基本sql语法，文件上传，越权 AI：熟练codex，deepseek，claudecodecli等ai工具，进行日常工作协作，使用agent制作小工具，app，逆向，ai与git联合进 行开发的迭代，记录 安卓： 安卓逆向：fridahook，基本调试流程，签名，打包，脱壳 安卓开发：compose，协程，mvvm架构，了解基本网络请求，了解kotlin，了解jetpack常用组件Viewmodel，了解基本的And roid四大组件与生命周期，了解sprintboot框架，python/fastapi服务器 Windows：熟悉ida，xdbg，jadx，jeb工具使用，花指令，异常处理，各种常见算法，py打包，控制流平坦化，smc，vm语 言：c，python，java，汇编，kotlin 比赛经历： 2025强网杯，2025强网拟态，2025中国移动盐城分部大学生选拔，2026领航杯，2026御网杯 2026第九届中国高校智能机器人创意大赛-软件系统安全赛全国总决赛 获得奖项： 院个人三等奖 国A软件安全大赛国家一等奖 江苏省领航杯省特等奖 御网杯网络安全大赛线上一等奖 个人实操： 某课表软件去除广告 •edu.src平台中危，低危漏洞产出 项目经历 通过算法助手，以及mt管理器抓取app的activity活动记录，去除广告，不过导致手机号无法注册，但是可以正常导入课程使用， 不影响 项目描述： RelayTokens 是一款面向AI 中转站用户的AndroidToken用量查询应用。用户输入中转站地址、账号和密码后，应用通过中转站 提供的API 获取账户余额、累计Token、今日Token、请求次数以及各模型的Token消耗数据，方便用户在手机端实时查看使用情 况。 主要功能：\n盐城师范学院 本科 物联网工程 2024-2028 盐城师范学院 本科 物联网工程 2024-2028 教育经历 物联网工程 至今 - 支持自定义中转站地址和账号登录 - 查看账户余额、累计Token、今日Token和请求次数 - 查看今日各模型的Token消耗和请求次数 - 查看总模型用量统计 - 支持手动刷新数据 - 支持Token自动刷新和退出登录 - 适配兼容Sub2API 接口规范的中转站 采用技术： - 使用Kotlin开发Android应用 - 使用JetpackCompose构建用户界面 - 使用MVVM架构组织代码 - 使用ViewModel 管理界面状态和业务操作 - 使用StateFlow更新界面状态 - 使用Retrofit/HTTP接口访问中转站服务 - 使用SharedPreferences 保存登录Token - 按功能划分为View、ViewModel、Repository和API 数据层 教育经历 荣誉奖项 江苏省领航杯省特等奖 院个人三等奖 国A软件安全大赛国家一等奖 御网杯网络安全大赛线上一等奖",
+    "facts": [
+      "候选人陆强飞，盐城师范学院物联网工程本科在读，简历标注就读时间为2024—2028。",
+      "RelayTokens 项目是一款 Android Token 用量查询应用，支持配置中转站地址、登录、查看余额与模型用量、手动刷新及 Token 自动刷新；简历称其兼容 Sub2API 接口规范的中转站。",
+      "RelayTokens 使用 Kotlin、Jetpack Compose、MVVM、ViewModel、StateFlow、Retrofit 和 SharedPreferences；代码按 View、ViewModel、Repository 和 API 数据层组织。",
+      "候选人描述曾通过算法助手和 MT 管理器记录某课表软件的 Activity 活动并去除广告；简历注明手机号无法注册，但仍可导入课程。",
+      "简历列出 Frida Hook、基本调试、签名、打包和脱壳等 Android 逆向技能，以及 IDA、xdbg、jadx、JEB 等工具使用经验。",
+      "简历列出江苏省领航杯省特等奖、国 A 软件安全大赛国家一等奖、御网杯网络安全大赛线上一等奖和院个人三等奖。",
+      "简历列出参加2025强网杯、2025强网拟态、2025中国移动盐城分部大学生选拔、2026领航杯、2026御网杯及第九届中国高校智能机器人创意大赛软件系统安全赛全国总决赛。",
+      "简历列出 MySQL、基本 SQL、Python、FastAPI、Java、Kotlin、Git 等技术或工具；其中对部分技术的描述为了解或基本使用。"
+    ],
+    "pending": [
+      "请提供岗位的具体职责、任职要求和技术栈，以便评估匹配度并确定面试重点。",
+      "RelayTokens 的实际完成状态、本人负责范围、测试覆盖、上线或用户使用情况未在简历中说明。",
+      "简历未说明某课表软件去广告项目的具体分析过程、技术实现及授权或测试环境；项目结果还包括手机号无法注册这一限制。",
+      "简历中的比赛参与经历与获奖经历需要分别核实，尤其是奖项对应的赛事、年份、个人或团队角色。",
+      "简历中出现2026年项目经历及比赛经历，需核实具体时间、项目状态及经历真实性；项目时间标注为2026.09—2026.09和2026.10—2026.10。",
+      "简历列出期望薪资5—7K，但未提供目标工作地点、到岗时间或实习安排。"
+    ],
+    "questions": [
+      "在 RelayTokens 项目中，请按一次完整的数据请求说明 ViewModel、Repository、Retrofit API 和 StateFlow 各自承担什么职责；请求失败时界面状态如何处理？",
+      "你提到 RelayTokens 兼容 Sub2API 接口规范的中转站。请举例说明登录、Token 自动刷新和退出登录的请求流程，以及你如何处理凭证保存和失效？",
+      "你通过算法助手和 MT 管理器处理课表软件广告时，如何定位相关 Activity 或广告触发逻辑？去广告后手机号无法注册，你如何判断影响范围并定位原因？",
+      "请结合一次具体 Android 逆向经历，说明你使用 Frida Hook 或 JADX 找到了什么目标、如何验证分析结论，以及签名或重新打包过程中遇到的困难。",
+      "你获得了国 A 软件安全大赛国家一等奖和江苏省领航杯省特等奖。请分别说明其中一项比赛的题目类型、你实际负责的部分和最终结果是如何取得的。",
+      "简历列出 FastAPI、MySQL 和基本 SQL。请结合你做过的项目说明是否实际使用过这些技术；如果没有用于 RelayTokens，请说明你会怎样为该应用设计一个提供用量查询数据的后端接口。"
+    ],
+    "parsed": {
+      "projects": [
+        "claudecodecli等ai工具",
+        "使用agent制作小工具",
+        "了解sprintboot框架",
+        "fastapi服务",
+        "jeb工具",
+        "6第九届中国高校智能机器人创意大赛-软件系统",
+        "edu.src平台",
+        "以及mt管理器抓取app"
+      ],
+      "tech": [
+        "MySQL",
+        "SQL",
+        "Git",
+        "Kotlin",
+        "Python",
+        "FastAPI",
+        "IDA",
+        "Java",
+        "Android"
+      ],
+      "metrics": [],
+      "gaps": []
+    },
+    "match": 0,
+    "matchReason": "未提供具体岗位 JD 内容，无法评估岗位要求与简历证据的匹配度；当前只能确认候选人具备 Android 开发、应用分析与网络安全竞赛相关经历。",
+    "source": "llm",
+    "provider": "custom",
+    "model": "gpt-6.1-sol",
+    "at": "2026-10-21T01:13:55.025Z"
+  },
+  {
+    "id": "cvmvhfegydug0eo9a7",
+    "jobId": "j1792506161941",
+    "name": "陆强飞1",
+    "cand": "陆强飞1",
+    "text": "wakeup课程表 2026.09-2026.09 api中转站token用量查询 全栈工程师 2026.10-2026.10 陆强飞 男 | 籍贯：淮安 | 非党员 | 13405503060 | 1492540483@qq.com 期望薪资：5-7K 个人优势 个人博客 CSDN：https://blog.csdn.net/2403_87805237?type=blog 博客园：https：//www.cnblogs.com/L2Z2Z2] Github：https：//github.com/L22222-oss 技术栈： web：Mysql，dbbower使用，nmap，burpsuite使用，基本sql语法，文件上传，越权 AI：熟练codex，deepseek，claudecodecli等ai工具，进行日常工作协作，使用agent制作小工具，app，逆向，ai与git联合进 行开发的迭代，记录 安卓： 安卓逆向：fridahook，基本调试流程，签名，打包，脱壳 安卓开发：compose，协程，mvvm架构，了解基本网络请求，了解kotlin，了解jetpack常用组件Viewmodel，了解基本的And roid四大组件与生命周期，了解sprintboot框架，python/fastapi服务器 Windows：熟悉ida，xdbg，jadx，jeb工具使用，花指令，异常处理，各种常见算法，py打包，控制流平坦化，smc，vm语 言：c，python，java，汇编，kotlin 比赛经历： 2025强网杯，2025强网拟态，2025中国移动盐城分部大学生选拔，2026领航杯，2026御网杯 2026第九届中国高校智能机器人创意大赛-软件系统安全赛全国总决赛 获得奖项： 院个人三等奖 国A软件安全大赛国家一等奖 江苏省领航杯省特等奖 御网杯网络安全大赛线上一等奖 个人实操： 某课表软件去除广告 •edu.src平台中危，低危漏洞产出 项目经历 通过算法助手，以及mt管理器抓取app的activity活动记录，去除广告，不过导致手机号无法注册，但是可以正常导入课程使用， 不影响 项目描述： RelayTokens 是一款面向AI 中转站用户的AndroidToken用量查询应用。用户输入中转站地址、账号和密码后，应用通过中转站 提供的API 获取账户余额、累计Token、今日Token、请求次数以及各模型的Token消耗数据，方便用户在手机端实时查看使用情 况。 主要功能：\n盐城师范学院 本科 物联网工程 2024-2028 盐城师范学院 本科 物联网工程 2024-2028 教育经历 物联网工程 至今 - 支持自定义中转站地址和账号登录 - 查看账户余额、累计Token、今日Token和请求次数 - 查看今日各模型的Token消耗和请求次数 - 查看总模型用量统计 - 支持手动刷新数据 - 支持Token自动刷新和退出登录 - 适配兼容Sub2API 接口规范的中转站 采用技术： - 使用Kotlin开发Android应用 - 使用JetpackCompose构建用户界面 - 使用MVVM架构组织代码 - 使用ViewModel 管理界面状态和业务操作 - 使用StateFlow更新界面状态 - 使用Retrofit/HTTP接口访问中转站服务 - 使用SharedPreferences 保存登录Token - 按功能划分为View、ViewModel、Repository和API 数据层 教育经历 荣誉奖项 江苏省领航杯省特等奖 院个人三等奖 国A软件安全大赛国家一等奖 御网杯网络安全大赛线上一等奖",
+    "facts": [
+      "候选人就读于盐城师范学院物联网工程专业，本科，简历标注就读时间为2024—2028。",
+      "RelayTokens 项目使用 Kotlin、Jetpack Compose、MVVM、ViewModel、StateFlow、Retrofit 和 SharedPreferences，提供中转站用量查询、手动刷新、Token 自动刷新及退出登录等功能。",
+      "简历称 RelayTokens 适配兼容 Sub2API 接口规范的中转站。",
+      "简历列出 Android 逆向相关经验，包括 Frida Hook、基本调试流程、签名、打包和脱壳。",
+      "简历列出 Windows 逆向工具 IDA、xdbg、jadx、jeb，并提及花指令、异常处理、控制流平坦化、SMC 和 VM。",
+      "简历列出比赛及奖项，包括国A软件安全大赛国家一等奖、江苏省领航杯省特等奖、御网杯网络安全大赛线上一等奖，以及2026年第九届中国高校智能机器人创意大赛软件系统安全赛全国总决赛经历。",
+      "简历描述曾通过算法助手和 MT 管理器抓取某课表软件的 Activity 活动记录并去除广告，同时注明手机号无法注册但仍可导入课程。"
+    ],
+    "pending": [
+      "需要提供完整岗位 JD，才能核对岗位职责、必备技能、经验年限及匹配程度。",
+      "RelayTokens 的开发完成度、个人负责范围、实际运行或测试情况，以及项目日期需要核实；简历顶部日期存在2026.09—2026.09和2026.10—2026.10的记录。",
+      "Frida、IDA、xdbg、jadx、jeb等工具的实际使用深度及独立完成的分析任务需要通过面试核实。",
+      "比赛名称、参赛角色、获奖证明及个人贡献需要核实。",
+      "课表软件去广告项目的授权与测试边界、具体实现方式及手机号注册受影响的原因需要核实。"
+    ],
+    "questions": [
+      "请按一次完整的数据流说明 RelayTokens 如何从用户登录获取 Token，到 Retrofit 请求用量接口，再由 Repository、ViewModel 和 StateFlow 更新 Compose 界面；你具体实现了哪些环节？",
+      "你提到适配兼容 Sub2API 接口规范的中转站。遇到接口字段或响应格式差异时，如何处理解析、错误状态和兼容性？请结合项目中的实际情况说明。",
+      "RelayTokens 将登录 Token 保存在 SharedPreferences。你如何处理 Token 自动刷新、刷新失败、退出登录和凭据安全？目前实现了哪些，哪些尚未实现？",
+      "在去除课表软件广告的过程中，你通过算法助手和 MT 管理器抓取 Activity 活动记录。请说明你如何定位广告触发流程，以及手机号无法注册这一副作用是如何发现和分析的。",
+      "请选一个你实际使用 Frida Hook 或 IDA、xdbg 分析的案例，说明目标、关键观察、采用的分析步骤，以及你如何验证结论；不涉及未经授权的目标或敏感细节。",
+      "你获得国A软件安全大赛国家一等奖和江苏省领航杯省特等奖。请分别说明其中一项作品或赛题的目标、你的个人职责、主要技术决策，以及最终结果如何评定。"
+    ],
+    "parsed": {
+      "projects": [
+        "claudecodecli等ai工具",
+        "使用agent制作小工具",
+        "了解sprintboot框架",
+        "fastapi服务",
+        "jeb工具",
+        "6第九届中国高校智能机器人创意大赛-软件系统",
+        "edu.src平台",
+        "以及mt管理器抓取app"
+      ],
+      "tech": [
+        "MySQL",
+        "SQL",
+        "Git",
+        "Kotlin",
+        "Python",
+        "FastAPI",
+        "IDA",
+        "Java",
+        "Android"
+      ],
+      "metrics": [],
+      "gaps": []
+    },
+    "match": 0,
+    "matchReason": "岗位 JD 内容为空，无法将岗位要求与简历证据进行匹配；此分数表示当前无法评估，不代表候选人不匹配。",
+    "source": "llm",
+    "provider": "custom",
+    "model": "gpt-6.1-sol",
+    "at": "2026-10-21T01:20:56.918Z"
+  }
+]

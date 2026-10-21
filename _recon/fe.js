@@ -1,0 +1,918 @@
+
+/* ============ 基础工具 ============ */
+var $ = function (s) { return document.querySelector(s); };
+var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function getParam(k) { return new URLSearchParams(location.search).get(k); }
+function fmtTime(t) { if (!t) return '—'; var d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+var toastTimer = null;
+function toast(msg) { var t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('on'); }, 2200); }
+function api(path, opts) {
+  opts = opts || {};
+  var init = { method: opts.method || 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
+  if (opts.body !== undefined) init.body = JSON.stringify(opts.body);
+  return fetch(path, init).then(function (r) {
+    return r.text().then(function (txt) {
+      var data = null;
+      try { data = txt ? JSON.parse(txt) : null; } catch (e) { data = txt; }
+      if (!r.ok) throw Object.assign(new Error((data && data.error) || ('HTTP ' + r.status)), { status: r.status, data: data });
+      return data;
+    });
+  });
+}
+function show(id) { ['loginPage', 'adminApp', 'candApp', 'offerApp', 'portalApp'].forEach(function (x) { var el = $('#' + x); if (el) el.classList.add('hide'); }); if (id) $('#' + id).classList.remove('hide'); }
+
+/* ============ 路由 ============ */
+var ME = null, JOBS = [], REPORTS = [], FILTER = 'all', SETTINGS = { autoAdvance: true };
+
+function boot() {
+  var offer = getParam('offer');
+  if (offer) return initOfferPage(offer);
+  var portal = getParam('portal');
+  if (portal) return initPortal(portal);
+  var job = getParam('job');
+  if (job) return initCandidate(job, getParam('cand') || '', getParam('round'), getParam('rid'));
+  api('/api/auth/session').then(function (me) { ME = me; enterAdmin(); }).catch(function () { show('loginPage'); });
+}
+
+/* ============ 登录注册 ============ */
+$('#toReg').onclick = function (e) { e.preventDefault(); $('#loginForm').classList.add('hide'); $('#regForm').classList.remove('hide'); };
+$('#toLogin').onclick = function (e) { e.preventDefault(); $('#regForm').classList.add('hide'); $('#loginForm').classList.remove('hide'); };
+$('#lgBtn').onclick = function () {
+  $('#lgErr').textContent = '';
+  api('/api/auth/login', { method: 'POST', body: { account: $('#lgAccount').value, password: $('#lgPwd').value } })
+    .then(function (me) { ME = me; enterAdmin(); })
+    .catch(function (d) { $('#lgErr').textContent = d.message || '登录失败'; });
+};
+$('#rgBtn').onclick = function () {
+  var err = $('#rgErr'); err.textContent = '';
+  var account = $('#rgAccount').value.trim(), name = $('#rgName').value.trim();
+  var pwd = $('#rgPwd').value, pwd2 = $('#rgPwd2').value;
+  if (!account) return (err.textContent = '请输入账号（3-40 位英文字母、数字或 . _ + -）。');
+  if (/[\u4e00-\u9fa5\s]/.test(account)) return (err.textContent = '账号不能包含中文或空格。');
+  if (account.length < 3 || account.length > 40) return (err.textContent = '账号长度需为 3-40 位。');
+  if (!/^[\w.+-]{3,40}$/.test(account)) return (err.textContent = '账号仅允许英文字母、数字和 . _ + -。');
+  if (name.length > 30) return (err.textContent = '显示名最多 30 个字。');
+  if (!pwd || pwd.length < 6) return (err.textContent = '密码至少 6 位。');
+  if (pwd !== pwd2) return (err.textContent = '两次输入的密码不一致。');
+  var btn = this; btn.disabled = true;
+  api('/api/auth/register', { method: 'POST', body: { account: account, name: name, password: pwd } })
+    .then(function (me) { ME = me; enterAdmin(); })
+    .catch(function (d) { err.textContent = d.message || '注册失败'; btn.disabled = false; });
+};
+$('#logoutBtn').onclick = function () { api('/api/auth/logout', { method: 'POST' }).then(function () { location.href = '/'; }); };
+
+/* ============ 管理端 ============ */
+function enterAdmin() {
+  show('adminApp');
+  $('#whoAmI').textContent = ME.name + (ME.role === 'admin' ? ' · 管理员' : ' · 成员');
+  $('#accName').textContent = ME.account;
+  $('#accRole').textContent = ME.role === 'admin' ? '管理员（可管理岗位与企业）' : '成员（仅可面试与查看）';
+  loadJobs(); loadReports(); loadOrgs(); loadSettings(); loadLlmConfig();
+}
+$$('.tabs button').forEach(function (b) {
+  b.onclick = function () {
+    $$('.tabs button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    ['jobs', 'reports', 'orgs', 'account'].forEach(function (k) { $('#tab-' + k).classList.toggle('hide', k !== b.dataset.tab); });
+  };
+});
+
+$('#jobCreate').onclick = function () {
+  var name = $('#jobName').value.trim();
+  if (!name) return toast('请填写岗位名称');
+  api('/api/jobs', { method: 'POST', body: { name: name, jd: $('#jobJd').value, round1Count: Number($('#jobR1').value) || 6, round2Count: Number($('#jobR2').value) || 6 } })
+    .then(function () { $('#jobName').value = ''; $('#jobJd').value = ''; loadJobs(); toast('岗位已创建'); })
+    .catch(function (d) { toast(d.message || '创建失败'); });
+};
+
+function loadJobs() {
+  api('/api/jobs').then(function (js) { JOBS = js; paintJobs(); }).catch(function () {});
+}
+function paintJobs() {
+  var el = $('#jobList');
+  if (!JOBS.length) { el.innerHTML = '<div class="card muted">还没有岗位，先在上面创建一个。</div>'; return; }
+  el.innerHTML = JOBS.map(function (j) {
+    var reps = REPORTS.filter(function (r) { return r.jobId === j.id; });
+    var c = { pending: 0, interviewing: 0, practice: 0, evaluated: 0, offer: 0, signing: 0, signed: 0 };
+    reps.forEach(function (r) { if (c[r.stage] != null) c[r.stage]++; });
+    var link = location.origin + '/?job=' + encodeURIComponent(j.id);
+    return '<div class="jobcard"><div class="row"><div class="grow"><div class="nm">' + esc(j.name) + '</div>' +
+      '<div class="muted">第一轮 ' + j.round1Count + ' 题 · 第二轮 ' + j.round2Count + ' 题 · 创建于 ' + fmtTime(j.createdAt) + '</div></div>' +
+      '<button class="danger" onclick="delJob(\'' + j.id + '\')">删除</button></div>' +
+      '<div style="margin-top:10px"><span class="chip">全部 ' + reps.length + '</span><span class="chip">待决定 ' + c.pending + '</span>' +
+      '<span class="chip">二轮 ' + c.interviewing + '</span><span class="chip">实操 ' + c.practice + '</span><span class="chip">已评估 ' + c.evaluated + '</span></div>' +
+      '<div class="muted" style="margin-top:8px">面试入口</div><div class="linkbox">' + esc(link) + '</div>' +
+      '<button class="ghost" style="margin-top:8px" onclick="copyText(\'' + esc(link) + '\',\'链接已复制\')">复制面试入口</button>' +
+      '<div class="muted" style="margin-top:8px">进度查询入口</div><div class="linkbox">' + esc(location.origin + '/?portal=' + encodeURIComponent(j.id)) + '</div>' +
+      '</div>';
+  }).join('');
+}
+window.delJob = function (id) {
+  if (!confirm('确认删除该岗位？')) return;
+  api('/api/jobs/' + id, { method: 'DELETE' }).then(function () { loadJobs(); toast('已删除'); });
+};
+window.copyText = function (text, msg) {
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { toast(msg || '已复制'); }).catch(function () { toast('复制失败，请手动选择'); });
+  else toast('复制失败，请手动选择');
+};
+
+var STAGE_NAMES = { all: '全部', pending: '待决定', interviewing: '二轮进行中', practice: '第三关·实操中', evaluated: '已评估', offer: '已发Offer', signing: '待签约', signed: '已签约' };
+function loadReports() {
+  api('/api/reports').then(function (rs) { REPORTS = rs; paintReports(); paintJobs(); }).catch(function () {});
+}
+function paintReports() {
+  var counts = { all: REPORTS.length };
+  Object.keys(STAGE_NAMES).forEach(function (k) { if (k !== 'all') counts[k] = REPORTS.filter(function (r) { return r.stage === k; }).length; });
+  $('#reportFilter').innerHTML = Object.keys(STAGE_NAMES).map(function (k) {
+    return '<span class="seg' + (FILTER === k ? ' on' : '') + '" data-f="' + k + '">' + STAGE_NAMES[k] + ' ' + (counts[k] || 0) + '</span>';
+  }).join('');
+  $$('#reportFilter .seg').forEach(function (s) { s.onclick = function () { FILTER = s.dataset.f; paintReports(); }; });
+
+  var list = FILTER === 'all' ? REPORTS : REPORTS.filter(function (r) { return r.stage === FILTER; });
+  if (!list.length) { $('#reportList').innerHTML = '<div class="muted">暂无记录。</div>'; return; }
+  $('#reportList').innerHTML = list.map(function (r) {
+    var r1 = r.round1 || {}, r2 = r.round2;
+    var v = r1.verdict || '—';
+    var cls = v === '通过' ? 'ok' : v === '不通过' ? 'no' : '';
+    return '<div class="jobcard"><div class="row"><div class="grow"><div class="nm">' + esc(r.cand) + ' · ' + esc(r.jobName) + '</div>' +
+      '<div class="muted">' + fmtTime(r.at) + ' · ' + (STAGE_NAMES[r.stage] || r.stage) + '</div></div>' +
+      '<span class="verdict ' + cls + '">第一轮 ' + esc(v) + '</span>' +
+      (r2 ? '<span class="verdict ' + (r2.verdict === '通过' ? 'ok' : 'no') + '">第二轮 ' + esc(r2.verdict) + '</span>' : '') +
+      '<button class="plain" onclick="openDetail(\'' + r.id + '\')">详情</button></div></div>';
+  }).join('');
+}
+
+window.openDetail = function (id) {
+  api('/api/reports/' + id).then(function (r) { renderDetail(r); });
+};
+
+function renderDetail(r) {
+  var r1 = r.round1 || {}, r2 = r.round2, ev = r.eval;
+  var h = '<div class="card"><div class="row"><div class="grow"><div class="h1">' + esc(r.cand) + '</div>' +
+    '<div class="muted">岗位 ' + esc(r.jobName) + ' · 完成时间 ' + fmtTime(r.at) + ' · 当前阶段 ' + esc(STAGE_NAMES[r.stage] || r.stage) + '</div></div>' +
+    '<button class="plain" onclick="backToReports()">返回</button></div>';
+  h += '<div class="grid" style="margin-top:14px">' +
+    '<div class="scorebox"><b>' + (r1.scores ? r1.scores.logic : '—') + '</b><span class="muted">第一轮 · 逻辑性</span></div>' +
+    '<div class="scorebox"><b>' + (r1.scores ? r1.scores.accuracy : '—') + '</b><span class="muted">第一轮 · 准确性</span></div>' +
+    (r2 ? '<div class="scorebox"><b>' + r2.scores.communication + '</b><span class="muted">沟通能力</span></div>' +
+      '<div class="scorebox"><b>' + r2.scores.learning + '</b><span class="muted">学习能力</span></div>' +
+      '<div class="scorebox"><b>' + r2.scores.execution + '</b><span class="muted">执行能力</span></div>' : '') +
+    '</div>';
+
+  if (r.recommend) {
+    h += '<div class="ai-eval"><span class="tag">AI 推进建议</span><span class="grow">' + esc(r.recommend.text) + '</span></div>';
+  }
+
+  if (r1.questions) {
+    h += '<div class="h2" style="margin-top:16px">第一轮信息（题目与作答）<span class="verdict ' + (r1.verdict === '通过' ? 'ok' : 'no') + '" style="margin-left:8px">' + esc(r1.verdict) + '</span></div>';
+    r1.questions.forEach(function (q, i) {
+      var d = (r1.details || [])[i] || {}, hit = (r1.hits || [])[i] || {};
+      h += '<div class="qa"><div class="q">Q' + (i + 1) + ' · ' + esc(q) + '</div>' +
+        '<div class="a">' + esc((r1.answers && r1.answers[i]) || '（未作答，该题计 0 分）') + '</div>' +
+        '<div class="muted" style="margin-top:6px">该题逻辑 ' + (d.logic || 0) + ' 分' +
+        (hit.total ? ' · 命中考察要点 ' + hit.hit + ' / ' + hit.total : '') +
+        (d.answered ? '（结构 ' + d.layer + ' + 因果 ' + d.cause + ' + 细节 ' + d.detail + '）' : '') + '</div></div>';
+    });
+    if (r1.verdict === '不通过' && !r2) {
+      h += '<button class="plain" onclick="forcePassR1(\'' + r.id + '\')">人工改判通过 · 补发认证码</button>';
+    }
+  }
+
+  if (r2) {
+    h += '<div class="h2" style="margin-top:16px">第二轮信息（题目与作答）<span class="verdict ' + (r2.verdict === '通过' ? 'ok' : 'no') + '" style="margin-left:8px">' + esc(r2.verdict) + '</span></div>';
+    var DIM = { communication: '沟通能力', learning: '学习能力', execution: '执行能力' };
+    r2.questions.forEach(function (q, i) {
+      var e1 = (r2.evals || [])[i];
+      h += '<div class="qa"><div class="q">' + esc(DIM[(r2.dims || [])[i]] || '综合') + ' · ' + esc(q) + '</div>' +
+        ((r2.materials || [])[i] ? '<div class="material"><b>现场阅读材料</b>' + esc(r2.materials[i]) + '</div>' : '') +
+        '<div class="a">' + esc((r2.answers && r2.answers[i]) || '（未作答）') + '</div>' +
+        (e1 ? '<div class="muted" style="margin-top:6px"><b>' + e1.score + ' 分</b> · ' + esc(e1.comment || '') + (e1.flagged ? ' · <span class="tag red">疑似模板化回答</span>' : '') + '</div>' : '') +
+        '</div>';
+    });
+    if (ev) h += '<div class="ai-eval"><span class="tag">AI 评估</span><span>' + esc(ev.summary) + '</span></div>';
+  }
+
+  if (r.round1 && r.round1.verdict === '通过' && !r2) {
+    var link2 = location.origin + '/?job=' + encodeURIComponent(r.jobId) + '&name=' + encodeURIComponent(r.jobName) + '&cand=' + encodeURIComponent(r.cand) + '&round=2&rid=' + encodeURIComponent(r.id);
+    h += '<label class="lb">第二轮面试链接（发给候选人）</label><div class="linkbox">' + esc(link2) + '</div>' +
+      '<button class="ghost" style="margin-top:8px" onclick="copyText(\'' + esc(link2) + '\',\'已复制\')">复制第二轮链接</button>';
+  }
+
+  h += '<div class="h2" style="margin-top:16px">第三关 · 实操交付</div>';
+  if (r.practice && r.practice.url) {
+    h += '<div class="p-step"><b>候选人已提交作品</b><div class="linkbox" style="margin-top:6px">' + esc(r.practice.url) + '</div>' +
+      '<div class="muted" style="margin-top:6px">提交于 ' + fmtTime(r.practice.submittedAt) + (r.practice.reachable ? ' · 网址已验证可达' : ' · 网址未验证可达，请人工核验') + '</div>' +
+      (r.practice.note ? '<div class="muted">说明：' + esc(r.practice.note) + '</div>' : '') + '</div>' +
+      '<div class="ai-eval"><span class="tag">系统预评</span><span><b>' + r.practice.autoScore + '</b> 分（依据网址可达性与说明完整度，请人工复核）</span></div>';
+    if (r.practice.hrScore != null) {
+      h += '<div class="ai-eval"><span class="tag">HR 已确认</span><span><b>' + r.practice.hrScore + '</b> 分' + (r.practice.hrComment ? ' · ' + esc(r.practice.hrComment) : '') + '</span></div>';
+    } else {
+      h += '<label class="lb">确认得分（0-100）</label><input id="prScore" type="number" min="0" max="100" value="' + r.practice.autoScore + '">' +
+        '<label class="lb">评语（可选）</label><input id="prComment" placeholder="如：功能完整，部署可用">' +
+        '<button style="margin-top:10px" onclick="confirmPractice(\'' + r.id + '\')">确认得分 · 进入已评估</button>';
+    }
+  } else {
+    h += '<div class="muted">等待候选人提交实操作品（候选人凭姓名 + 认证码在自助入口提交）。</div>';
+  }
+
+  h += '<div class="h2" style="margin-top:16px">Offer 与签约</div>';
+  if (r.contract) {
+    h += '<div class="muted">电子合同：' + (r.contract.status === 'signed'
+      ? '已签署（' + esc(r.contract.name || '') + ' · ' + fmtTime(r.contract.signedAt) + '）'
+      : '候选人已接受 Offer，等待其在手机端完成手写签约') + '</div>';
+    var cl = location.origin + '/?offer=' + encodeURIComponent(r.id);
+    h += '<label class="lb">Offer / 签约链接</label><div class="linkbox">' + esc(cl) + '</div>' +
+      '<button class="ghost" style="margin-top:8px" onclick="copyText(\'' + esc(cl) + '\',\'链接已复制\')">复制链接</button>';
+    if (r.contract.signData) h += '<div style="margin-top:12px"><div class="muted">候选人手写签名</div><img src="' + r.contract.signData + '" style="width:280px;max-width:100%;border:1px dashed #c9c2e0;border-radius:8px;margin-top:6px"></div>';
+  } else if (r.offer) {
+    h += '<div class="muted">状态：' + esc(r.offer.status) + ' · 薪资 ' + esc(r.offer.salary || '—') + ' · 入职 ' + esc(r.offer.startDate || '—') + '</div>';
+    if (r.offer.status === 'sent') {
+      var ol = location.origin + '/?offer=' + encodeURIComponent(r.id);
+      h += '<label class="lb">Offer 链接</label><div class="linkbox">' + esc(ol) + '</div>' +
+        '<button class="ghost" style="margin-top:8px" onclick="copyText(\'' + esc(ol) + '\',\'Offer 链接已复制\')">复制</button>';
+    }
+  } else {
+    h += '<label class="lb">职位名称</label><input id="ofTitle" value="' + esc(r.jobName) + '">' +
+      '<label class="lb">薪资待遇</label><input id="ofSalary" placeholder="如 300 元/天">' +
+      '<label class="lb">入职日期</label><input id="ofStart" type="date">' +
+      '<label class="lb">确认有效期至</label><input id="ofExpire" type="date">' +
+      '<label class="lb">备注（可选）</label><input id="ofNote">' +
+      '<button style="margin-top:12px" onclick="sendOffer(\'' + r.id + '\')">保存并发出</button>';
+  }
+
+  h += '<div class="h2" style="margin-top:16px">阶段</div><select id="stageSelect">' +
+    Object.keys(STAGE_NAMES).filter(function (k) { return k !== 'all'; }).map(function (k) {
+      return '<option value="' + k + '"' + (r.stage === k ? ' selected' : '') + '>' + STAGE_NAMES[k] + '</option>';
+    }).join('') + '</select>';
+  h += '</div>';
+
+  $('#main').innerHTML = h;
+  var sel = $('#stageSelect');
+  if (sel) sel.onchange = function () {
+    api('/api/reports/' + r.id + '/stage', { method: 'POST', body: { stage: sel.value } })
+      .then(function () { toast('阶段已更新'); loadReports(); }).catch(function (d) { toast(d.message); });
+  };
+  var st = $('#ofStart'), ex = $('#ofExpire');
+  if (st && ex) {
+    function addDays(n) { var d = new Date(Date.now() + n * 86400000); return d.toISOString().slice(0, 10); }
+    st.value = addDays(14); ex.value = addDays(7);
+  }
+}
+
+window.backToReports = function () { $('#main').innerHTML = '<div id="tab-reports"><div class="card"><div class="h2">候选人报告</div><div id="reportFilter" style="margin:10px 0"></div><div id="reportList"></div></div></div>'; paintReports(); };
+window.forcePassR1 = function (id) {
+  if (!confirm('确认将该候选人第一轮人工改判为通过？将补发 6 位认证码。')) return;
+  api('/api/reports/' + id + '/round1/pass', { method: 'POST' })
+    .then(function (out) { toast('已改判通过，认证码 ' + out.accessCode); openDetail(id); })
+    .catch(function (d) { toast(d.message); });
+};
+window.confirmPractice = function (id) {
+  var score = parseInt($('#prScore').value, 10);
+  var comment = $('#prComment').value;
+  api('/api/reports/' + id + '/practice/review', { method: 'POST', body: { score: score, comment: comment } })
+    .then(function () { toast('实操得分已确认，进入已评估'); openDetail(id); loadReports(); })
+    .catch(function (d) { toast(d.message); });
+};
+window.sendOffer = function (id) {
+  api('/api/reports/' + id + '/offer', { method: 'POST', body: {
+    title: $('#ofTitle').value, salary: $('#ofSalary').value,
+    startDate: $('#ofStart').value, expire: $('#ofExpire').value, note: $('#ofNote').value,
+  } }).then(function () { toast('Offer 已发出'); openDetail(id); loadReports(); })
+    .catch(function (d) { toast(d.message); });
+};
+
+function loadOrgs() {
+  api('/api/orgs').then(function (os) {
+    $('#orgList').innerHTML = os.length
+      ? '<table class="tb"><tbody>' + os.map(function (o) { return '<tr><th>' + esc(o.name) + '</th><td class="muted">创建于 ' + fmtTime(o.createdAt) + '</td></tr>'; }).join('') + '</tbody></table>'
+      : '<div class="muted">还没有创建企业。</div>';
+  }).catch(function () {});
+}
+$('#createOrgBtn').onclick = function () {
+  var name = $('#orgName').value.trim();
+  if (!name) return toast('请填写企业名称');
+  api('/api/orgs', { method: 'POST', body: { name: name } }).then(function () { $('#orgName').value = ''; loadOrgs(); toast('企业已创建'); });
+};
+function loadSettings() {
+  api('/api/settings').then(function (s) { SETTINGS = s; paintSettings(); }).catch(function () {});
+}
+function paintSettings() {
+  $$('#autoAdvanceRow .seg').forEach(function (b) { b.classList.toggle('on', (SETTINGS.autoAdvance !== false) === (b.dataset.aa === 'on')); });
+}
+$$('#autoAdvanceRow .seg').forEach(function (b) {
+  b.onclick = function () { SETTINGS.autoAdvance = b.dataset.aa === 'on'; paintSettings(); };
+});
+$('#saveSettings').onclick = function () { api('/api/settings', { method: 'PUT', body: SETTINGS }).then(function () { toast('设置已保存'); }); };
+
+/* ---- AI 接入配置 ---- */
+var LLM_CFG = null;
+function loadLlmConfig() {
+  api('/api/llm/config').then(function (d) {
+    LLM_CFG = d;
+    var sel = $('#llmProvider');
+    sel.innerHTML = d.providers.map(function (p) {
+      return '<option value="' + esc(p.id) + '"' + (p.id === d.status.provider ? ' selected' : '') + '>' + esc(p.name) + '</option>';
+    }).join('');
+    $('#llmBase').value = d.status.base_url || '';
+    $('#llmModel').value = d.status.model || '';
+    var s = d.status;
+    $('#llmStatus').innerHTML = s.enabled
+      ? '当前：<b>' + esc(s.provider_name) + '</b> · ' + esc(s.model) + ' · 密钥 ' + esc(s.key_hint || '未设置') + '（来源 ' + esc(s.source) + '）'
+      : '当前未接入，运行在规则通道（仍会追问与评判，但措辞不如模型灵活）';
+  }).catch(function () {});
+}
+$('#llmProvider').onchange = function () {
+  if (!LLM_CFG) return;
+  var p = LLM_CFG.providers.filter(function (x) { return x.id === this.value; }.bind(this))[0];
+  if (p) { $('#llmBase').value = p.base_url || ''; $('#llmModel').value = p.model || ''; }
+};
+$('#llmSave').onclick = function () {
+  var btn = this; btn.disabled = true;
+  api('/api/llm/config', { method: 'PUT', body: {
+    provider: $('#llmProvider').value,
+    baseUrl: $('#llmBase').value.trim(),
+    model: $('#llmModel').value.trim(),
+    apiKey: $('#llmKey').value.trim() || undefined,
+  } }).then(function (r) {
+    $('#llmKey').value = '';
+    toast('已保存');
+    $('#llmResult').textContent = r.status.enabled ? '配置已生效，建议点「测试连接」验证。' : '已保存，但仍缺少必要字段。';
+    loadLlmConfig();
+  }).catch(function (d) { $('#llmResult').textContent = d.message || '保存失败'; })
+    .then(function () { btn.disabled = false; });
+};
+$('#llmTest').onclick = function () {
+  var btn = this; btn.disabled = true;
+  $('#llmResult').textContent = '测试中…';
+  api('/api/llm/test', { method: 'POST', body: {} })
+    .then(function (r) {
+      if (r.ok) {
+        $('#llmResult').textContent = '连接成功 · ' + r.latency_ms + 'ms · 模型回复「' + (r.reply || '') + '」';
+      } else {
+        var why = r.reason || '未知原因';
+        if (/API Key/.test(why)) why += '　→ 填入 Key 后点「保存」，再点「测试连接」';
+        $('#llmResult').textContent = '未连通：' + why + (r.detail ? ' / ' + r.detail : '');
+      }
+    })
+    .catch(function (d) { $('#llmResult').textContent = '连接失败：' + (d.message || ''); })
+    .then(function () { btn.disabled = false; });
+};
+$('#changePwd').onclick = function () {
+  api('/api/account/password', { method: 'POST', body: { oldPassword: $('#oldPwd').value, newPassword: $('#newPwd').value } })
+    .then(function () { toast('密码已更新'); $('#oldPwd').value = $('#newPwd').value = ''; })
+    .catch(function (d) { toast(d.message); });
+};
+
+/* ============ 候选人端 ============ */
+var CAND = { jobId: '', jobName: '', jd: '', cand: '', round: 1, rid: '', planId: '', questions: [], answers: [], expects: [], dims: [], materials: [], evals: [], cur: 0, total: 6, clientId: '', mode: 'bank', resume: '', generating: false, accessCode: '' };
+
+function initCandidate(jobId, cand, round, rid) {
+  show('candApp');
+  CAND.jobId = jobId; CAND.round = parseInt(round, 10) || 1; CAND.rid = rid || '';
+  CAND.cand = cand || '';
+  CAND.clientId = localStorage.getItem('iv_cid_' + jobId) || '';
+  if (cand) $('#candName').value = cand;
+  if (cand) $('#candWho').textContent = cand;
+  api('/api/interview?job=' + encodeURIComponent(jobId)).then(function (job) {
+    CAND.jobName = job.name; CAND.jd = job.jd || '';
+    CAND.total = CAND.round === 2 ? (job.round2Count || 6) : (job.round1Count || 6);
+    $('#candJobTitle').textContent = job.name;
+    if (CAND.round === 2 && CAND.rid) return startRound2FromLink();
+  }).catch(function () {
+    $('#candIntro').innerHTML = '<div class="card center"><div class="h2">面试入口无效</div><div class="muted">岗位不存在或未发布，请联系 HR 重新获取链接。</div></div>';
+  });
+}
+$('#candResume').addEventListener('input', function () {
+  $('#candCount').textContent = this.value.length + ' / 12000 字' + (this.value.length < 20 ? '，至少 20 字才能开始' : '');
+});
+
+/* ============ 面试方式切换 ============ */
+$$('.seg[data-mode]').forEach(function (s) {
+  s.onclick = function () {
+    $$('.seg[data-mode]').forEach(function (x) { x.classList.toggle('on', x === s); });
+    CAND.mode = s.dataset.mode;
+    $('#modeHint').textContent = CAND.mode === 'ai'
+      ? 'AI 面试官全程主持：没有固定题数，它自己判断该追问什么、什么时候问够了。'
+      : '标准流程：固定 6 题，逐题出题。';
+  };
+});
+
+/* ============ AI 全程面试 ============ */
+var AI = { sid: '', busy: false, done: false, turns: 0 };
+
+function aiScorePill(score) {
+  var cls = score >= 70 ? 'high' : score >= 45 ? 'mid' : 'low';
+  return '<span class="score-pill ' + cls + '">' + score + ' 分</span>';
+}
+
+function aiAppendTurn(t) {
+  var html = '<div class="turn" id="turn-' + t.idx + '">';
+  html += '<div class="q"><div class="meta">' +
+    (String(t.kind || '').indexOf('probe:') === 0 ? '追问' : '面试官') +
+    (t.reason ? ' · ' + esc(t.reason) : '') + '</div>' + esc(t.q) + '</div>';
+  $('#aiLog').insertAdjacentHTML('beforeend', html + '</div>');
+  aiScroll();
+}
+
+function aiFillAnswer(idx, answer, judgment) {
+  var el = $('#turn-' + idx);
+  if (!el) return;
+  var pill = judgment ? aiScorePill(judgment.score) + (judgment.flagged ? '<span class="score-pill low">可疑</span>' : '') : '';
+  var ev = judgment && judgment.evidence && judgment.evidence.length
+    ? '<div class="evidence">' + judgment.evidence.map(function (e) { return '「' + esc(e) + '」'; }).join(' ') + '</div>' : '';
+  el.insertAdjacentHTML('beforeend',
+    '<div class="a">' + esc(answer) + '</div>' +
+    (judgment ? '<div class="verdict">' + pill + esc(judgment.comment || '') + '</div>' + ev : ''));
+  aiScroll();
+}
+
+function aiScroll() { var l = $('#aiLog'); if (l) l.scrollTop = l.scrollHeight; }
+
+function aiProgress(p) {
+  if (!p) return;
+  $('#aiProgress').textContent = '第 ' + (p.turns + 1) + ' 题 · 已考察 ' + p.angles.length + ' 个角度' + (p.probes ? ' · 追问 ' + p.probes + ' 次' : '');
+}
+
+function startAiInterview(name, resume) {
+  var btn = $('#candStart'); btn.disabled = true; btn.textContent = 'AI 面试官准备中…';
+  api('/api/agent/session/start', { method: 'POST', body: { jobId: CAND.jobId, cand: name, resume: resume, maxTurns: 8 } })
+    .then(function (r) {
+      AI.sid = r.sessionId; AI.done = false; AI.turns = 0;
+      $('#candIntro').classList.add('hide');
+      $('#candDone').classList.add('hide');
+      $('#aiPane').classList.remove('hide');
+      $('#aiLog').innerHTML = '';
+      $('#aiVerdict').classList.add('hide');
+      $('#aiTurn').classList.remove('hide');
+      $('#aiAnswer').value = '';
+      $('#aiAnswer').disabled = false;
+      $('#aiSend').disabled = false;
+
+      var f = r.facts || {};
+      var bits = [];
+      if (f.metrics && f.metrics.length) bits.push('量化指标 ' + f.metrics.length + ' 处');
+      if (f.projects && f.projects.length) bits.push('项目 ' + f.projects.length + ' 个');
+      if (f.gaps && f.gaps.length) bits.push('待验证技能 ' + f.gaps.length + ' 项');
+      if (bits.length) toast('简历已解析：' + bits.join('，'));
+
+      aiAppendTurn({ idx: 0, q: r.question.text, kind: r.question.kind, reason: r.question.reason });
+      aiProgress(r.progress);
+      $('#aiWhy').textContent = r.question.reason || '';
+      $('#aiAnswer').focus();
+      AI.turns = 1;
+    })
+    .catch(function (d) {
+      $('#candErr').textContent = d.message || '无法开始 AI 面试';
+      btn.disabled = false; btn.textContent = '开始面试';
+    });
+}
+
+function aiSend() {
+  if (AI.busy || AI.done) return;
+  var text = $('#aiAnswer').value.trim();
+  if (text.length < 2) { toast('请先回答'); $('#aiAnswer').focus(); return; }
+  AI.busy = true;
+  $('#aiSend').disabled = true;
+  $('#aiAnswer').disabled = true;
+  var idx = AI.turns - 1;
+  $('#aiTurn').classList.add('hide');
+
+  var waitId = 'wait-' + idx;
+  $('#aiLog').insertAdjacentHTML('beforeend', '<div class="typing" id="' + waitId + '">AI 正在评判这段回答…</div>');
+  aiScroll();
+
+  api('/api/agent/session/turn', { method: 'POST', body: { sessionId: AI.sid, answer: text } })
+    .then(function (r) {
+      var w = $('#' + waitId); if (w) w.remove();
+      aiFillAnswer(idx, text, r.judgment);
+      AI.busy = false;
+      $('#aiAnswer').value = '';
+
+      if (r.done) { aiFinish(r.verdict, r.reportId); return; }
+
+      $('#aiLog').insertAdjacentHTML('beforeend', '<div class="typing">AI 决定下一步：' +
+        esc(r.decision.action === 'probe' ? '继续追问' : '换个角度') + ' —— ' + esc(r.decision.reason) + '</div>');
+      aiAppendTurn({ idx: AI.turns, q: r.question.text, kind: r.question.kind, reason: r.question.reason });
+      AI.turns++;
+      aiProgress(r.progress);
+      $('#aiWhy').textContent = r.question.reason || '';
+      $('#aiTurn').classList.remove('hide');
+      $('#aiAnswer').disabled = false;
+      $('#aiSend').disabled = false;
+      $('#aiAnswer').focus();
+    })
+    .catch(function (d) {
+      var w = $('#' + waitId); if (w) w.remove();
+      AI.busy = false;
+      $('#aiTurn').classList.remove('hide');
+      $('#aiAnswer').disabled = false;
+      $('#aiSend').disabled = false;
+      toast(d.message || '提交失败');
+    });
+}
+
+function aiFinish(verdict, reportId) {
+  AI.done = true;
+  $('#aiTurn').classList.add('hide');
+  $('#aiAnswer').disabled = true;
+  $('#aiSend').disabled = true;
+  var v = verdict || {};
+  var box = $('#aiVerdict');
+  box.classList.remove('hide');
+  box.innerHTML =
+    '<div class="card" style="margin-top:14px">' +
+    '<div class="h2">面试结束 · ' + esc(v.verdict || '') + '</div>' +
+    '<div style="margin:8px 0">' + aiScorePill(v.score || 0) +
+    '<span class="muted">共 ' + (v.turns || 0) + ' 题 · 追问 ' + (v.probes || 0) + ' 次</span></div>' +
+    '<div class="muted" style="line-height:1.7">' + esc(v.summary || '') + '</div>' +
+    (v.reasons && v.reasons.length ? '<div class="rubric">' + v.reasons.map(function (r) { return '<span>' + esc(r) + '</span>'; }).join('') + '</div>' : '') +
+    (reportId ? '<div class="muted" style="margin-top:10px">记录已保存，HR 可在「数据」中查看完整对话与逐题证据。</div>' : '') +
+    '<button class="plain" style="margin-top:12px" onclick="location.reload()">再来一次</button>' +
+    '</div>';
+  $('#aiProgress').textContent = '已结束';
+  aiScroll();
+}
+
+$('#aiSend').onclick = aiSend;
+$('#aiAnswer').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSend(); }
+});
+$('#aiQuit').onclick = function () {
+  if (AI.done || !AI.sid) { location.reload(); return; }
+  if (!confirm('确定结束本场面试？已作答的部分会照常评判并归档。')) return;
+  api('/api/agent/session/finish', { method: 'POST', body: { sessionId: AI.sid } })
+    .then(function (r) { aiFinish(r.verdict, r.reportId); })
+    .catch(function (d) { toast(d.message || '操作失败'); });
+};
+$('#candStart').onclick = function () {
+  var name = $('#candName').value.trim();
+  var resume = $('#candResume').value.trim();
+  var err = $('#candErr');
+  err.textContent = '';
+  if (!name) return (err.textContent = '请填写姓名');
+  if (resume.length < 20) return (err.textContent = '简历正文至少 20 字');
+  CAND.cand = name; CAND.resume = resume;
+  $('#candWho').textContent = name;
+  if (CAND.mode === 'ai') return startAiInterview(name, resume);
+  var btn = this; btn.disabled = true; btn.textContent = 'AI 出题中…';
+  api('/api/interview/plan', { method: 'POST', body: { jobId: CAND.jobId, cand: name, resume: resume } })
+    .then(function (plan) {
+      CAND.planId = plan.planId;
+      CAND.questions = plan.questions.slice();
+      CAND.expects = new Array(plan.questions.length).fill(null);
+      CAND.answers = new Array(plan.questions.length).fill('');
+      CAND.basis = new Array(plan.questions.length).fill('');
+      CAND.kind = new Array(plan.questions.length).fill('');
+      CAND.cur = 0;
+      if (plan.agent && plan.agent.facts) {
+        var f = plan.agent.facts;
+        var bits = [];
+        if (f.metrics && f.metrics.length) bits.push('识别到量化指标 ' + f.metrics.length + ' 处');
+        if (f.projects && f.projects.length) bits.push('项目 ' + f.projects.length + ' 个');
+        if (f.gaps && f.gaps.length) bits.push('待验证技能 ' + f.gaps.length + ' 项');
+        if (bits.length) toast('简历已解析：' + bits.join('，'));
+      }
+      beginRound1();
+    })
+    .catch(function (d) { err.textContent = d.message || '出题失败'; btn.disabled = false; btn.textContent = '开始面试'; });
+};
+
+function beginRound1() {
+  CAND.isRound2 = false;
+  $('#candIntro').classList.add('hide');
+  $('#candStep').classList.remove('hide');
+  $('#stepDim').classList.add('hide');
+  paintStep();
+}
+
+function paintStep() {
+  var total = CAND.total;
+  var q = CAND.questions[CAND.cur];
+  if (!q) return;
+  $('#stepProgress').textContent = '第 ' + (CAND.cur + 1) + ' / ' + total + ' 题';
+  $('#stepBar').style.width = Math.round(((CAND.cur + 1) / total) * 100) + '%';
+  if (CAND.isRound2) {
+    var DIM = { communication: '沟通能力', learning: '学习能力', execution: '执行能力' };
+    $('#stepDim').classList.remove('hide');
+    $('#stepDim').textContent = DIM[(CAND.dims || [])[CAND.cur]] || '综合能力';
+  } else $('#stepDim').classList.add('hide');
+  var mat = (CAND.materials || [])[CAND.cur];
+  if (mat) { $('#stepMaterial').innerHTML = '<b>请先阅读以下材料</b>' + esc(mat); $('#stepMaterial').classList.remove('hide'); }
+  else $('#stepMaterial').classList.add('hide');
+  $('#stepText').textContent = q;
+
+  /* 为什么问这一题：让追问可见，而不是黑箱 */
+  var why = $('#stepWhy');
+  if (why) {
+    var basis = (CAND.basis || [])[CAND.cur] || '';
+    var kind = (CAND.kind || [])[CAND.cur] || '';
+    if (basis) {
+      var isProbe = String(kind).indexOf('probe:') === 0;
+      why.textContent = (isProbe ? '追问 · ' : '') + basis;
+      why.classList.remove('hide');
+    } else why.classList.add('hide');
+  }
+
+  $('#stepAnswer').value = CAND.answers[CAND.cur] || '';
+  $('#stepPrev').disabled = CAND.cur === 0 || CAND.generating;
+  var atLast = CAND.cur === CAND.questions.length - 1;
+  var needMore = CAND.questions.length < total;
+  var last = atLast && !needMore;
+  $('#stepSubmit').classList.toggle('hide', !last || CAND.generating);
+  $('#stepSubmit').textContent = CAND.isRound2 ? '提交面试' : '提交第一轮';
+  $('#stepNext').classList.toggle('hide', last);
+  if (CAND.generating) { $('#stepNext').disabled = true; $('#stepNext').textContent = 'AI 出题中…'; }
+  else {
+    $('#stepNext').textContent = '下一题';
+    $('#stepNext').disabled = atLast && needMore ? !String(CAND.answers[CAND.cur] || '').trim() : false;
+  }
+}
+$('#stepPrev').onclick = function () { if (!CAND.generating && CAND.cur > 0) { CAND.cur--; paintStep(); } };
+$('#stepAnswer').addEventListener('input', function () { CAND.answers[CAND.cur] = this.value; paintStep(); });
+$('#stepNext').onclick = function () {
+  if (CAND.generating) return;
+  var nextIdx = CAND.cur + 1;
+  if (nextIdx > CAND.questions.length - 1) return;
+  if (!String(CAND.answers[CAND.cur] || '').trim()) { toast('请先回答当前问题'); $('#stepAnswer').focus(); return; }
+  /* 每一题都交给智能体：先读上一题回答，缺什么追什么 */
+  CAND.generating = true; paintStep();
+  var body = CAND.isRound2
+    ? { round: 2, idx: nextIdx, jobName: CAND.jobName, jd: CAND.jd, questions: CAND.questions, answers: CAND.answers }
+    : { round: 1, planId: CAND.planId, idx: nextIdx, jobName: CAND.jobName, jd: CAND.jd, resume: CAND.resume, questions: CAND.questions, answers: CAND.answers };
+  api('/api/agent/next-question', { method: 'POST', body: body })
+    .then(function (q) {
+      CAND.questions[nextIdx] = q.text;
+      if (CAND.isRound2) { CAND.dims[nextIdx] = q.dim || 'execution'; CAND.materials[nextIdx] = q.material || ''; }
+      else { CAND.expects[nextIdx] = q.expects || []; }
+      CAND.basis[nextIdx] = q.basis || '';
+      CAND.kind[nextIdx] = q.kind || '';
+      CAND.cur = nextIdx;
+    })
+    .catch(function () { toast('出题暂不可用，已用内置题补位'); CAND.cur = nextIdx; })
+    .then(function () { CAND.generating = false; paintStep(); });
+};
+$('#stepSubmit').onclick = function () {
+  var firstEmpty = -1, unanswered = 0;
+  for (var i = 0; i < CAND.questions.length; i++) {
+    if (!String(CAND.answers[i] || '').trim()) { unanswered++; if (firstEmpty < 0) firstEmpty = i; }
+  }
+  if (unanswered) { toast('还有 ' + unanswered + ' 题未作答'); CAND.cur = firstEmpty; paintStep(); return; }
+  var btn = this; btn.disabled = true;
+
+  if (CAND.isRound2) {
+    for (var si = 0; si < CAND.questions.length; si++) {
+      if (String(CAND.answers[si] || '').trim().length < 20) {
+        btn.disabled = false; toast('第 ' + (si + 1) + ' 题回答太短（至少 20 字）'); CAND.cur = si; paintStep(); return;
+      }
+    }
+    btn.textContent = 'AI 评估中…';
+    api('/api/agent/eval-round2', { method: 'POST', body: { questions: CAND.questions, answers: CAND.answers, dims: CAND.dims, materials: CAND.materials } })
+      .then(function (evals) {
+        return api('/api/reports', { method: 'POST', body: { round: 2, reportId: CAND.rid, answers: CAND.answers, questions: CAND.questions, dims: CAND.dims, materials: CAND.materials, evals: evals } });
+      })
+      .then(function (out) { CAND.accessCode = out.accessCode; showDone('r2'); })
+      .catch(function (d) { toast(d.message || '提交失败'); btn.disabled = false; btn.textContent = '提交面试'; });
+  } else {
+    api('/api/reports', { method: 'POST', body: { planId: CAND.planId, clientId: CAND.clientId || (CAND.clientId = 'c' + Date.now()), answers: CAND.answers } })
+      .then(function (out) {
+        btn.disabled = false;
+        if (out.accessCode) CAND.accessCode = out.accessCode;
+        if (out.passed && out.id) { CAND.rid = out.id; showDone('r1'); }
+        else showDone('fail');
+      })
+      .catch(function (d) { toast(d.message || '提交失败'); btn.disabled = false; });
+  }
+};
+
+function showDone(mode) {
+  $('#candStep').classList.add('hide');
+  $('#candDone').classList.remove('hide');
+  var box = $('#candAccessCode'), nxt = $('#candNext');
+  $('#doneTitle').textContent = mode === 'fail' ? '本轮面试已结束' : '提交成功';
+  if (CAND.accessCode) {
+    box.innerHTML = '<div class="muted">你的 6 位认证码（请保存）</div>' +
+      '<div style="font-size:28px;font-weight:800;letter-spacing:4px;color:var(--brand)">' + esc(CAND.accessCode) + '</div>' +
+      '<div class="muted">在自助查询入口输入「姓名 + 认证码」可随时查询进度并进入下一环节。</div>';
+    box.classList.remove('hide');
+  } else box.classList.add('hide');
+
+  if (mode === 'r1') {
+    nxt.innerHTML = '<button id="nextR2" style="width:100%">进入第二轮面试</button>' +
+      '<div class="muted" style="margin-top:8px">第二轮共 ' + CAND.total + ' 题：沟通 / 学习 / 执行，含现场阅读材料题。</div>';
+    nxt.classList.remove('hide');
+    $('#nextR2').onclick = function () {
+      var b = this; b.disabled = true; b.textContent = '正在准备…';
+      api('/api/interview/plan2', { method: 'POST', body: { reportId: CAND.rid } })
+        .then(function (p) { if (p.accessCode) CAND.accessCode = p.accessCode; beginRound2(p); })
+        .catch(function (d) { toast(d.message); b.disabled = false; b.textContent = '进入第二轮面试'; });
+    };
+  } else if (mode === 'r2' && CAND.rid && CAND.accessCode) {
+    nxt.innerHTML = '<button id="nextR3" style="width:100%">进入第三关 · 实操交付</button>' +
+      '<div class="muted" style="margin-top:8px">独立完成含前端与后端的项目并部署到公网，提交作品网址后由系统预评、HR 确认。</div>';
+    nxt.classList.remove('hide');
+    $('#nextR3').onclick = function () {
+      location.href = '/?portal=' + encodeURIComponent(CAND.jobId) + '&name=' + encodeURIComponent(CAND.cand) + '&code=' + encodeURIComponent(CAND.accessCode || '');
+    };
+  } else {
+    nxt.innerHTML = '<div class="muted" style="text-align:center">本轮面试已结束，感谢你的参与。</div>';
+    nxt.classList.remove('hide');
+  }
+}
+
+function startRound2FromLink() {
+  api('/api/interview/plan2', { method: 'POST', body: { reportId: CAND.rid } })
+    .then(function (p) { if (p.accessCode) CAND.accessCode = p.accessCode; beginRound2(p); })
+    .catch(function (d) { toast(d.message || '第二轮链接无效'); });
+}
+
+function beginRound2(plan) {
+  CAND.isRound2 = true;
+  CAND.questions = plan.questions.slice();
+  CAND.dims = plan.dims.slice();
+  CAND.materials = plan.materials.slice();
+  CAND.answers = new Array(plan.questions.length).fill('');
+  CAND.cur = 0;
+  CAND.total = plan.questions.length;
+  $('#candIntro').classList.add('hide');
+  $('#candDone').classList.add('hide');
+  $('#candStep').classList.remove('hide');
+  paintStep();
+}
+
+/* ============ Offer 端 ============ */
+function initOfferPage(rid) {
+  show('offerApp');
+  api('/api/reports/' + encodeURIComponent(rid) + '/offer').then(function (d) {
+    var o = d.offer || {};
+    var body = '<div class="h2">你好，' + esc(d.cand) + '</div>' +
+      '<div class="muted">恭喜！以下是「' + esc(d.jobName) + '」的录用信息：</div>' +
+      '<table class="tb" style="margin-top:10px"><tbody>' +
+      '<tr><th>职位名称</th><td>' + esc(o.title || d.jobName) + '</td></tr>' +
+      '<tr><th>薪资待遇</th><td>' + esc(o.salary || '—') + '</td></tr>' +
+      '<tr><th>入职日期</th><td>' + esc(o.startDate || '—') + '</td></tr>' +
+      '<tr><th>确认有效期至</th><td>' + esc(o.expire || '—') + '</td></tr>' +
+      (o.note ? '<tr><th>备注</th><td>' + esc(o.note) + '</td></tr>' : '') +
+      '</tbody></table><div id="offState" style="margin-top:12px"></div><div id="contractBox" style="margin-top:12px"></div>';
+    $('#offerBody').innerHTML = body;
+
+    if (o.status === 'sent') {
+      $('#offState').innerHTML = '<div class="row"><button class="grow" id="offAccept">接受 Offer</button><button class="plain grow" id="offDecline">暂不接受</button></div>';
+      $('#offAccept').onclick = function () { decide('accept', this); };
+      $('#offDecline').onclick = function () { decide('decline', this); };
+      function decide(action, btn) {
+        btn.disabled = true;
+        api('/api/reports/' + encodeURIComponent(rid) + '/offer/accept', { method: 'POST', body: { action: action } })
+          .then(function (out) {
+            if (action !== 'accept') { $('#offState').innerHTML = '<div class="tag gray">已回复 · 暂不接受</div>'; return; }
+            $('#offAccept').disabled = $('#offDecline').disabled = true;
+            toast('已接受，请完成电子签约');
+            renderSignUI(rid, d.cand, out.contract);
+          }).catch(function (e) { btn.disabled = false; toast(e.message); });
+      }
+    } else if (o.status === 'accepted' && d.contract && d.contract.status === 'pending_sign') {
+      renderSignUI(rid, d.cand, d.contract);
+    } else if (d.contract && d.contract.status === 'signed') {
+      $('#offState').innerHTML = '<div class="tag">已完成电子签约 · ' + esc(d.contract.name || '') + ' · ' + fmtTime(d.contract.signedAt) + '</div>' +
+        '<div class="muted" style="margin-top:6px">合同确认单已同步给 HR，入职当天请携带有效证件。</div>';
+    } else {
+      $('#offState').innerHTML = '<div class="tag gray">' + esc(o.status || '待发出') + '</div>';
+    }
+  }).catch(function () {
+    $('#offerBody').innerHTML = '<div class="h2">Offer 不存在</div><div class="muted">链接无效或已过期，请联系 HR。</div>';
+  });
+}
+
+function renderSignUI(rid, cand, contract) {
+  var box = $('#contractBox');
+  box.innerHTML = '<div class="h2" style="margin-top:14px">电子签约</div>' +
+    '<div class="muted">确认以下条款与你的录用信息一致，并在下方手写签名。签署后 HR 立即收到通知。</div>' +
+    '<table class="tb" style="margin-top:8px"><tbody>' +
+    '<tr><th>职位</th><td>' + esc((contract && contract.title) || '') + '</td></tr>' +
+    '<tr><th>薪资</th><td>' + esc((contract && contract.salary) || '') + '</td></tr>' +
+    '<tr><th>入职日期</th><td>' + esc((contract && contract.startDate) || '') + '</td></tr>' +
+    '</tbody></table>' +
+    '<label class="lb">签署姓名（须与本人一致）</label><input id="signName" placeholder="请输入你的姓名">' +
+    '<label class="lb">手写签名（用手指或鼠标在框内签名）</label>' +
+    '<canvas id="signPad" width="640" height="200"></canvas>' +
+    '<div class="row" style="margin-top:10px"><button class="plain grow" id="signClear">清除重写</button><span class="grow"></span><button class="grow" id="signConfirm">确认签署</button></div>' +
+    '<div id="signErr" class="muted" style="color:var(--bad);min-height:18px;margin-top:6px"></div>';
+
+  var cv = $('#signPad'), ctx = cv.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#26203a';
+  var drawing = false, hasDrawn = false, last = null;
+  function pos(e) {
+    var r = cv.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height };
+  }
+  cv.addEventListener('pointerdown', function (e) { drawing = true; hasDrawn = true; last = pos(e); e.preventDefault(); });
+  cv.addEventListener('pointermove', function (e) {
+    if (!drawing) return;
+    var p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p; e.preventDefault();
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { cv.addEventListener(ev, function () { drawing = false; }); });
+  $('#signClear').onclick = function () { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.strokeStyle = '#26203a'; hasDrawn = false; };
+  $('#signConfirm').onclick = function () {
+    var err = $('#signErr'); err.textContent = '';
+    var name = $('#signName').value.trim();
+    if (name.length < 2 || name.length > 30) return (err.textContent = '请填写 2-30 字的签署姓名。');
+    if (!hasDrawn) return (err.textContent = '请先在签名框内手写签名。');
+    var btn = this; btn.disabled = true;
+    var out = document.createElement('canvas'); out.width = cv.width; out.height = cv.height;
+    out.getContext('2d').drawImage(cv, 0, 0);
+    api('/api/reports/' + encodeURIComponent(rid) + '/contract/sign', { method: 'POST', body: { name: name, signData: out.toDataURL('image/png') } })
+      .then(function () {
+        box.innerHTML = '<div class="card" style="margin-top:12px;background:var(--brand-soft)"><div class="h2">签署完成</div>' +
+          '<div class="muted">电子合同已生效，HR 已同步收到。请按约定日期（' + esc((contract && contract.startDate) || '—') + '）报到。</div></div>';
+        $('#offState').innerHTML = '';
+        toast('签署成功');
+      })
+      .catch(function (e) { btn.disabled = false; err.textContent = e.message || '签署失败，请重试'; });
+  };
+}
+
+/* ============ 自助查询端 ============ */
+function initPortal(jobId) {
+  show('portalApp');
+  var preName = getParam('name'), preCode = getParam('code');
+  api('/api/interview?job=' + encodeURIComponent(jobId)).then(function (job) {
+    renderPortalForm(jobId, job.name);
+    if (preName && /^\d{6}$/.test(preCode)) {
+      $('#ptName').value = preName; $('#ptCode').value = preCode; $('#ptGo').click();
+    }
+  }).catch(function () {
+    $('#portalBody').innerHTML = '<div class="h2">入口无效</div><div class="muted">岗位不存在或未发布，请联系 HR。</div>';
+  });
+}
+function renderPortalForm(jobId, jobName) {
+  $('#portalBody').innerHTML =
+    '<div class="muted">岗位：「' + esc(jobName) + '」</div>' +
+    '<label class="lb">姓名</label><input id="ptName" placeholder="与面试时填写的姓名一致">' +
+    '<label class="lb">6 位认证码（第一轮完成后获得）</label><input id="ptCode" maxlength="6" inputmode="numeric" placeholder="000000">' +
+    '<div id="ptErr" class="muted" style="color:var(--bad);min-height:18px"></div>' +
+    '<button id="ptGo" style="width:100%">查询</button>';
+  $('#ptGo').onclick = function () {
+    var name = $('#ptName').value.trim(), code = $('#ptCode').value.replace(/\D/g, '');
+    var err = $('#ptErr'); err.textContent = '';
+    if (!name) return (err.textContent = '请填写姓名');
+    if (!/^\d{6}$/.test(code)) return (err.textContent = '请填写 6 位认证码');
+    var btn = this; btn.disabled = true; btn.textContent = '查询中…';
+    api('/api/portal/lookup', { method: 'POST', body: { jobId: jobId, name: name, code: code } })
+      .then(function (d) { renderPortalState(d, jobId, jobName); })
+      .catch(function (e) { btn.disabled = false; btn.textContent = '查询'; err.textContent = e.message || '查询失败'; });
+  };
+}
+function renderPortalState(d, jobId, jobName) {
+  var h = '<div class="muted">你好，<b>' + esc(d.cand) + '</b> · 岗位「' + esc(jobName) + '」 · 认证码已验证</div>';
+  if (d.canRound2) {
+    h += '<div class="p-step"><b>第一轮已通过</b>你可以直接进入第二轮能力评估（沟通 / 学习 / 执行，含现场阅读材料题）。</div>' +
+      '<button id="ptR2" style="width:100%">开始第二轮面试</button>';
+  } else if (d.stage === 'practice' && d.practice && d.practice.url) {
+    h += '<div class="p-step"><b>实操作品已提交</b>系统预评 ' + d.practice.autoScore + ' 分，HR 确认后进入下一环节，请耐心等待。</div>' +
+      '<div class="linkbox">' + esc(d.practice.url) + '</div>';
+  } else if (d.canPractice) {
+    h += '<div class="p-step"><b>第二轮已通过，进入第三关 · 实操交付</b>请独立完成一个包含前端与后端的完整项目，并部署到公网可访问的服务器。</div>' +
+      '<div class="p-step" style="border-left-color:#e8e4f4"><b>任务要求</b>前端：至少一个可访问页面，能完成一次真实交互；后端：至少一个接口，页面通过接口读写数据；部署：提交公网 IP 或域名网址。</div>' +
+      '<label class="lb">作品网址（公网可访问）</label><input id="ptUrl" placeholder="https://your-domain.com/ 或 http://1.2.3.4/">' +
+      '<label class="lb">补充说明（可选）</label><textarea id="ptNote" rows="3" placeholder="简述技术栈、完成的功能、部署方式"></textarea>' +
+      '<div id="ptErr2" class="muted" style="color:var(--bad);min-height:18px"></div>' +
+      '<button id="ptSubmit" style="width:100%">提交实操作品</button>';
+  } else if (d.stage === 'evaluated') {
+    h += (d.practice && d.practice.hrScore != null)
+      ? '<div class="p-step"><b>第三关已通过</b>实操作品已确认（' + d.practice.hrScore + ' 分），所有面试环节完成，HR 正在安排后续流程。</div>'
+      : '<div class="p-step"><b>已进入评估环节</b>所有面试环节已完成，HR 正在审核你的结果，请等待通知。</div>';
+  } else if (d.stage === 'offer' || d.stage === 'signing' || d.stage === 'signed') {
+    h += '<div class="p-step"><b>恭喜，已进入录用流程</b>如收到 Offer 链接，请打开链接确认并完成签约。</div>';
+  } else if (d.r2Done && d.r2Verdict === '不通过') {
+    h += '<div class="p-step"><b>本轮面试已结束</b>感谢参与，期待与你的下次相遇。</div>';
+  } else {
+    h += '<div class="p-step"><b>进行中</b>当前环节：' + esc(STAGE_NAMES[d.stage] || d.stage) + '。请按 HR 的指引继续，或稍后再来查询。</div>';
+  }
+  h += '<div class="muted" style="margin-top:10px;text-align:center">只显示你本人的结果 · 有疑问请联系 HR</div>';
+  $('#portalBody').innerHTML = h;
+
+  if (d.canRound2) $('#ptR2').onclick = function () {
+    location.href = '/?job=' + encodeURIComponent(jobId) + '&name=' + encodeURIComponent(jobName) + '&cand=' + encodeURIComponent(d.cand) + '&round=2&rid=' + encodeURIComponent(d.id);
+  };
+  if (d.canPractice) {
+    $('#ptSubmit').onclick = function () {
+      var url = $('#ptUrl').value.trim(), note = $('#ptNote').value.trim();
+      var err = $('#ptErr2'); err.textContent = '';
+      if (!/^https?:\/\/.+\..+/.test(url)) return (err.textContent = '请填写公网可访问的作品网址（http/https 开头）');
+      var btn = this; btn.disabled = true; btn.textContent = '提交中…';
+      api('/api/reports/' + encodeURIComponent(d.id) + '/practice', { method: 'POST', body: { url: url, note: note } })
+        .then(function (out) {
+          if (out.autoConfirmed) {
+            $('#portalBody').innerHTML = '<div class="p-step"><b>提交成功，已通过第三关</b>系统预评 <b style="color:var(--brand)">' + out.autoScore + ' 分</b>（网址已验证可达），系统已自动确认，你的面试全部环节已完成。</div>';
+          } else {
+            $('#portalBody').innerHTML = '<div class="p-step"><b>提交成功</b>系统预评 <b style="color:var(--brand)">' + out.autoScore + ' 分</b>' + (out.reachable ? '（网址已验证可达）' : '（网址暂未访问成功，HR 会人工核验）') + '。HR 确认后进入下一环节。</div>';
+          }
+        })
+        .catch(function (e) { btn.disabled = false; btn.textContent = '提交实操作品'; err.textContent = e.message || '提交失败'; });
+    };
+  }
+}
+
+boot();

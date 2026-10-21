@@ -1,0 +1,22 @@
+=== 1. 注册新账号 mxmvgrtlyw ===
+  → {"err":"","admin":true,"who":"矩阵测试 · 成员"}
+
+=== 2. 刷新页面，session 是否保持 ===
+  → {"admin":true,"login":false,"who":"矩阵测试 · 成员"}
+
+=== 3. 点退出 ===
+  click: clicked
+  → {"url":"http://127.0.0.1:3000/","login":true,"admin":false}
+
+=== 4. 用同一账号重新登录 ===
+  click: clicked
+  → {"lgErr":"","admin":true,"who":"矩阵测试 · 成员"}
+
+=== 5. 错误密码的提示文案 ===
+  → {"lgErr":"账号或密码不正确","btnDisabled":false}
+
+=== 6. 中文账号的提示 ===
+  → 账号不能包含中文或空格。
+
+--- 未捕获异常 ---
+（无）
