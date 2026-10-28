@@ -1,0 +1,303 @@
+<div id="toast" class="toast"></div>
+
+<!-- ================= 登录 / 注册 ================= -->
+<div id="loginPage" class="center hide">
+  <div class="card">
+    <div class="h1" style="color:var(--brand)">面试智能体</div>
+    <div class="muted" style="margin-bottom:14px">把面试交给 AI，你专注审核与决定。演示账号：admin / demo1234</div>
+    <div id="loginForm">
+      <label class="lb">登录账号</label><input id="lgAccount" placeholder="admin">
+      <label class="lb">密码</label><input id="lgPwd" type="password" placeholder="密码">
+      <div id="lgErr" class="muted" style="color:var(--bad);min-height:18px"></div>
+      <button id="lgBtn" style="width:100%">登录</button>
+      <div class="muted" style="margin-top:10px;text-align:center">还没有账号？<a href="#" id="toReg" style="color:var(--brand)">注册一个</a></div>
+    </div>
+    <div id="regForm" class="hide">
+      <label class="lb">账号</label><input id="rgAccount" placeholder="字母/数字，3-40 位">
+      <div class="muted" style="margin-top:4px">格式要求：3-40 位，仅限英文字母、数字或 . _ + -，不能用中文、空格或其他符号。</div>
+      <label class="lb">显示名（选填）</label><input id="rgName" placeholder="你的名字，最多 30 个字">
+      <label class="lb">密码</label><input id="rgPwd" type="password">
+      <div class="muted" style="margin-top:4px">格式要求：至少 6 位，建议字母 + 数字组合。</div>
+      <label class="lb">确认密码</label><input id="rgPwd2" type="password">
+      <div id="rgErr" class="muted" style="color:var(--bad);min-height:18px"></div>
+      <button id="rgBtn" style="width:100%">注册并登录</button>
+      <div class="muted" style="margin-top:10px;text-align:center"><a href="#" id="toLogin" style="color:var(--brand)">返回登录</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 管理端 ================= -->
+<div id="adminApp" class="hide">
+  <div id="topbar">
+    <span class="logo">面试智能体</span>
+    <div class="tabs">
+      <button data-tab="jobs" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M3 12h18"/></svg><span>岗位</span></button>
+      <button data-tab="orgs"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9.5" r="2.6"/><path d="M3.5 20c0-3 2.5-4.6 5.5-4.6s5.5 1.6 5.5 4.6M15.5 15.6c2.6.2 5 1.6 5 4.4"/></svg><span>企业</span></button>
+      <button data-tab="data"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4.5"/></svg><span>数据</span></button>
+      <button data-tab="account"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><span>账号</span></button>
+    </div>
+    <span class="grow"></span>
+    <span id="whoAmI" class="muted"></span>
+    <button class="plain" id="logoutBtn">退出</button>
+  </div>
+  <div id="main">
+
+    <!-- 岗位工作台（B 端首屏） -->
+    <div id="tab-jobs">
+      <div class="ws-head">
+        <div class="row" style="align-items:flex-end;gap:14px;flex-wrap:wrap">
+          <div class="grow">
+            <div class="muted" id="wsSpace">个人空间</div>
+            <div class="h1" style="margin:2px 0">岗位工作台</div>
+            <div class="muted" id="wsCount">共 0 个岗位 · 共 0 位候选人</div>
+          </div>
+          <div class="stat-cards" style="margin:0;width:auto;min-width:220px">
+            <div class="stat-card" style="padding:10px 14px"><b id="wsJobs" style="font-size:20px">0</b><span>可访问岗位</span></div>
+            <div class="stat-card" style="padding:10px 14px"><b id="wsCands" style="font-size:20px">0</b><span>位候选人</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row"><div class="sec-title grow">岗位与面试</div><button id="showCreate">＋ 创建 AI 面试</button></div>
+        <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
+          <input id="jobSearch" class="grow" style="min-width:160px;margin:0" placeholder="搜索岗位名称">
+          <div class="funnel" style="margin-top:0" id="jobFilterRow">
+            <span class="seg on" data-f="all">全部</span><span class="seg" data-f="published">已发布</span><span class="seg" data-f="draft">草稿</span>
+          </div>
+        </div>
+        <div id="jobGrid" style="margin-top:6px"></div>
+      </div>
+      <!-- 创建 AI 面试（居中弹窗，不挤占工作台） -->
+      <div id="createCard" class="modal hide">
+        <div class="card">
+          <div class="row"><div class="sec-title grow">创建 AI 面试</div><button class="plain" id="createClose">✕</button></div>
+          <div class="muted">把面试交给 AI，你专注审核与决定。</div>
+          <label class="lb">选择岗位卡片</label>
+          <div class="roles" id="roleCards"></div>
+          <label class="lb">或输入岗位名称</label>
+          <input id="newJobName" placeholder="岗位名称">
+          <div class="row" style="margin-top:10px">
+            <div class="grow"><label class="lb" style="margin-top:0">招聘人数</label><input id="newJobHead" type="number" min="1" value="1"></div>
+            <div class="grow"><label class="lb" style="margin-top:0">状态</label><select id="newJobStatus"><option value="published">已发布</option><option value="draft">草稿</option></select></div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button class="ghost grow" id="toggleJd">填写岗位描述（可选）</button>
+          </div>
+          <div id="jdWrap" class="hide" style="margin-top:10px"><textarea id="newJobJd" placeholder="岗位描述 JD：职责、要求、加分项…"></textarea></div>
+          <button id="createJobBtn" style="width:100%;margin-top:12px">创建面试</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 岗位详情（面试入口 / 自助入口 / AI 安排计划） -->
+    <div id="tab-jobdetail" class="hide"></div>
+
+    <!-- 简历导入 -->
+    <div id="tab-resume" class="hide">
+      <button class="plain" id="backJobs">← 返回岗位</button>
+      <div class="card" style="margin-top:12px">
+        <div class="h2" id="resumeJobTitle"></div>
+        <div class="muted">系统对照本岗位已发布的 JD，整理简历事实、待核实要求和个性化问题。审核分析后，把候选人专属链接发给 Ta。</div>
+        <div class="funnel" style="margin-top:12px">
+          <span class="seg on" id="modeSingle">单份导入</span><span class="seg" id="modeBatch">批量导入</span>
+        </div>
+        <div id="singleImport">
+          <label class="lb">候选人姓名</label>
+          <input id="candNameInput" placeholder="候选人" style="max-width:260px">
+          <label class="lb">选择简历文件（浏览器内提取文字，原文件不上传）</label>
+          <input type="file" id="resumeFile" accept=".txt,.md,.docx,.pdf" style="padding:7px">
+          <div class="muted">支持 PDF / DOCX / TXT，最多 5 MB、20 页；扫描图片暂不支持。</div>
+          <label class="lb">简历正文（可直接粘贴或修正提取结果）</label>
+          <textarea id="resumeText" rows="10" placeholder="粘贴简历正文，至少 20 字，最多 12000 字"></textarea>
+          <div class="row" style="margin-top:10px">
+            <span class="muted grow" id="resumeCount">0 / 12000 字。提交前请确认文字完整。</span>
+            <button id="prepareBtn">准备面试</button>
+          </div>
+        </div>
+        <div id="batchImport" class="hide">
+          <label class="lb">批量选择简历文件（可多选，候选人姓名取文件名）</label>
+          <input type="file" id="batchFiles" multiple accept=".txt,.md,.docx,.pdf" style="padding:7px">
+          <div class="muted">支持 PDF / DOCX / TXT，最多 20 份；AI 自动解析、按 JD 打匹配分并生成每位候选人的专属面试链接。</div>
+          <div class="row" style="margin-top:10px"><span class="muted grow" id="batchStatus">未选择文件</span><button id="batchRun">AI 匹配分析并生成链接</button></div>
+          <div id="batchResult" style="margin-top:12px"></div>
+        </div>
+      </div>
+      <div id="analysisBox" class="card hide" style="margin-top:14px"></div>
+    </div>
+
+    <!-- 报告列表 -->
+    <div id="tab-reports" class="hide">
+      <button class="plain" id="backJobs2">← 返回岗位</button>
+      <div class="card" style="margin-top:12px">
+        <div class="row"><div class="h2 grow" id="reportsJobTitle"></div><button class="plain" id="batchToggle">批量</button></div>
+        <div class="funnel" id="reportFilter"></div>
+        <div id="batchBar" class="row hide" style="margin:10px 0">
+          <span class="muted grow" id="batchCount">已选 0 人</span>
+          <button id="batchAdvance">推进到下一阶段</button>
+        </div>
+        <div id="reportList"></div>
+      </div>
+    </div>
+
+    <!-- 报告详情 -->
+    <div id="tab-detail" class="hide"></div>
+
+    <!-- 企业 -->
+    <div id="tab-orgs" class="hide">
+      <div class="card">
+        <div class="h2">创建企业空间</div>
+        <div class="muted">创建后你成为负责人；个人空间中的记录继续保留。</div>
+        <div class="row" style="margin-top:10px"><input id="orgName" class="grow" placeholder="企业名称" style="max-width:260px"><button id="createOrgBtn">创建并切换</button></div>
+      </div>
+      <div class="card" style="margin-top:14px"><div class="h2">已创建的企业</div><div id="orgList"></div></div>
+    </div>
+
+    <!-- 数据 -->
+    <div id="tab-data" class="hide">
+      <div class="card">
+        <div class="h2">数据与隐私</div>
+        <div class="muted">设置候选人数据的保留时间。到期后列入待处理清单，由管理员确认删除。</div>
+        <label class="lb">数据保留期限</label>
+        <div class="row" id="retentionRow">
+          <button class="seg" data-days="30">30 天</button>
+          <button class="seg" data-days="90">90 天</button>
+          <button class="seg" data-days="180">180 天</button>
+          <button class="seg" data-days="365">365 天</button>
+        </div>
+        <div class="row" style="margin-top:14px"><span class="muted grow" id="retentionHint"></span></div>
+        <div class="h2" style="margin-top:18px">AI 自动推进</div>
+        <div class="muted">开启后，第三关实操预评 ≥80 分且作品网址可达时，系统自动确认通过，候选人直通 Offer 环节，无需人工审核。</div>
+        <div class="row" style="margin-top:10px" id="autoAdvanceRow">
+          <button class="seg" data-aa="on" style="flex:1">开启（减少人工操作）</button>
+          <button class="seg" data-aa="off" style="flex:1">关闭（每次人工确认）</button>
+        </div>
+        <div class="row" style="margin-top:14px"><span class="muted grow" id="retentionHint2"></span><button id="saveSettings">保存设置</button></div>
+      </div>
+    </div>
+
+    <!-- 账号 -->
+    <div id="tab-account" class="hide">
+      <div class="card">
+        <div class="h2">账号与服务</div>
+        <table class="tb"><tbody>
+          <tr><th>登录账号</th><td id="accName"></td></tr>
+          <tr><th>账号角色</th><td id="accRole"></td></tr>
+          <tr><th>当前会话</th><td>已登录（本设备）</td></tr>
+        </tbody></table>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="h2">AI 接入</div>
+        <div class="muted">使用 OpenAI 兼容 API。密钥保存在服务器端，不会发到候选人浏览器。</div>
+        <div class="muted" id="llmStatus" style="margin-top:8px">正在读取配置…</div>
+        <label class="lb">服务商</label><select id="llmProvider"></select>
+        <label class="lb">接口地址（Base URL）</label><input id="llmBase" placeholder="https://api.deepseek.com/v1">
+        <label class="lb">模型名称</label><input id="llmModel" placeholder="deepseek-chat">
+        <label class="lb">API Key</label><input id="llmKey" type="password" autocomplete="new-password" placeholder="留空表示保留当前密钥">
+        <div class="row" style="margin-top:10px"><button id="llmSave">保存配置</button><button class="plain" id="llmTest">测试连接</button></div>
+        <div class="muted" id="llmResult" style="margin-top:8px"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="h2">修改密码</div>
+        <div class="muted">修改后请自行记牢，演示环境不提供找回。</div>
+        <label class="lb">当前密码</label><input id="oldPwd" type="password" style="max-width:300px">
+        <label class="lb">新密码</label><input id="newPwd" type="password" style="max-width:300px">
+        <button id="changePwd" style="margin-top:10px">更新密码</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 候选人端 ================= -->
+<div id="candApp" class="hide">
+  <div id="main" style="max-width:640px">
+    <!-- 面试说明：一屏布局——纯展示规则默认折叠，简历输入二选一，操作按钮固定底部 -->
+    <div id="candIntro">
+      <div class="cand-head cand-slim">
+        <div style="font-size:11px;opacity:.85">面试智能体 · 候选人端</div>
+        <h1 id="candJobTitle">AI 面试</h1>
+        <div style="opacity:.9">你好，<b id="candWho">候选人</b>！这场面试由 AI 主持。</div>
+      </div>
+      <div class="card candform">
+        <!-- 规则折叠条：默认收起，点开展开完整规则（纯展示内容不占一屏） -->
+        <button type="button" class="rules-head" id="rulesToggle">
+          <span class="grow" style="text-align:left">面试流程：两轮共 12 题 · 约 25 分钟</span>
+          <span id="rulesArrow">查看规则 ▾</span>
+        </button>
+        <div id="rulesBody" class="hide">
+          <div class="big"><b>面试分两轮</b>：第一轮由 AI 依据你的简历逐题出题，并<b>根据你的上一题回答实时追问</b>；评估逻辑性与回答准确性，通过后进入第二轮能力评估。</div>
+          <div class="step-hint">第一轮 · 简历问答（6 题，逻辑性 / 准确性）→ 第二轮 · 能力评估（6 题，沟通 / 学习 / 执行，<b>含现场阅读材料题</b>）。<b>每道题都必须作答（第二轮每题至少 20 字）</b>；AI 会逐题生成与评估，答完一题才会出下一题。</div>
+          <div class="row" style="margin:8px 0 0"><span class="chip">面试题数：6 + 6</span><span class="chip">预计时长：约 25 分钟</span></div>
+        </div>
+        <label class="lb" style="margin-top:10px">候选人姓名</label>
+        <input id="candSelfName" placeholder="请输入你的真实姓名（用于查询进度）">
+        <!-- 简历输入二选一：分段切换，避免文件框 + 大文本框同时占屏 -->
+        <div class="segrow" style="margin-top:10px">
+          <button type="button" class="seg on" id="segFile">上传简历文件</button>
+          <button type="button" class="seg" id="segPaste">粘贴正文</button>
+        </div>
+        <div id="candFileWrap" style="margin-top:8px">
+          <input type="file" id="candResumeFile" accept=".txt,.md,.docx,.pdf" style="padding:7px">
+          <div class="muted" style="margin-top:4px;font-size:12px">文件在浏览器里提取文字，原文件不会上传；扫描图片暂不支持。</div>
+        </div>
+        <div id="candPasteWrap" class="hide" style="margin-top:8px">
+          <textarea id="candResumeText" rows="5" placeholder="粘贴简历正文（至少 20 字）"></textarea>
+        </div>
+        <div class="row" style="margin-top:6px"><span class="muted grow" id="candResumeCount" style="font-size:12px">0 / 12000 字，至少 20 字</span></div>
+        <div id="candErr" style="color:var(--bad);min-height:16px" class="muted"></div>
+      </div>
+      <!-- 底部固定操作行：开始按钮永远可见，不随内容滚动 -->
+      <div class="candfoot">
+        <button id="startInterview" style="width:100%">开始 AI 面试</button>
+        <button id="startBuiltIn" class="ghost" style="width:100%;margin-top:8px">没有简历？用内置题库开始（6 道通用题）</button>
+      </div>
+    </div>
+
+    <!-- 逐题作答 -->
+    <div id="candStep" class="hide">
+      <div class="card">
+        <div class="row"><span class="tag" id="stepRound">第一轮 · 简历问答</span><span class="muted grow" style="text-align:right" id="stepProgress">第 1 / 6 题</span></div>
+        <div class="dim" id="stepDim" style="display:none"></div>
+        <div class="material hide" id="stepMaterial"></div>
+        <div class="big" id="stepText" style="margin:12px 0;font-weight:600"></div>
+        <textarea id="stepAnswer" rows="7" placeholder="请在此作答…"></textarea>
+        <div class="row" style="margin-top:12px">
+          <button class="plain" id="stepPrev">上一题</button>
+          <span class="grow"></span>
+          <button class="plain" id="stepNext">下一题</button>
+          <button id="stepSubmit" class="hide">提交</button>
+        </div>
+        <div class="progress"><i id="stepBar" style="width:0%"></i></div>
+        <div class="muted">请如实回答，AI 会根据你的回答进行追问；作答过程不会向你展示任何分数。</div>
+      </div>
+    </div>
+
+    <!-- 完成 -->
+    <div id="candDone" class="hide">
+      <div class="card" style="text-align:center">
+        <svg viewBox="0 0 48 48" style="width:52px;height:52px" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#15803d" stroke-width="3"/><path d="M15 24.5l6.5 6.5L33 18" fill="none" stroke="#15803d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="h2" style="margin:8px 0">面试已完成</div>
+        <div class="muted">你的作答已提交，结果已同步给 HR。请等待通知，无需重复提交。</div>
+        <div id="candAccessCode" class="access-code hide"></div>
+        <div id="candNext" class="hide" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Offer 确认端 ================= -->
+<div id="offerApp" class="hide">
+  <div id="main" style="max-width:560px">
+    <div class="cand-head"><h1>录用通知</h1><div style="opacity:.9">请确认以下录用信息，并选择是否接受。</div></div>
+    <div class="card" id="offerBody"></div>
+  </div>
+</div>
+
+<!-- ================= 候选人自助查询 / 第三关·实操交付 ================= -->
+<div id="portalApp" class="hide">
+  <div id="main" style="max-width:560px">
+    <div class="cand-head"><h1>查询面试进度</h1><div style="opacity:.9">输入姓名与 6 位认证码，查看你本人所处的环节，并直接进入下一步。</div></div>
+    <div class="card" id="portalBody"></div>
+  </div>
+</div>
+
+<!-- 云服务 SDK（免密钥大模型出题通道，IIFE 全局 WorkBuddyCloud） -->

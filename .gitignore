@@ -1,0 +1,7 @@
+node_modules/
+vueeee/dist/
+springboot/target/
+springboot/.idea/
+.idea/
+application-local.properties
+data/llm.json

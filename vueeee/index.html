@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#6d28d9" />
+    <title>面试智能体</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
+    <script>
+      window.CLOUD = null;
+      try {
+        window.CLOUD = WorkBuddyCloud.createWorkBuddyCloud({
+          endpoint: 'https://hireflow-ats.app.workbuddy.host',
+          publishableKey: 'wbpk_w1tF9EM6tnkhSVNB6BCws0_OqM7gMk3J3mZJLSdMy6UfAXv15ocqQ0x',
+        });
+      } catch (_) {}
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
